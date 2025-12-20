@@ -365,22 +365,31 @@ const deleteSubstitution = (subId: string) => {
               {(currentSet.bench || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">控え選手はいません</p>}
             </div>
           </div>
-          <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-100 shadow-inner">
-            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">交代履歴</h4>
-            <div className="space-y-2">
-              {(currentSet.substitutions || []).map(sub => (
-                <div key={sub.id} className="text-xs flex items-center justify-between border-b-2 border-white pb-2 font-bold">
-                  <span className="flex items-center gap-2">
-                    <span className="text-red-500 bg-red-50 px-2 py-1 rounded-lg">{sub.outPlayerName}</span>
-                    <span className="text-gray-300">▶</span>
-                    <span className="text-green-600 bg-green-50 px-2 py-1 rounded-lg">{sub.inPlayerName}</span>
-                  </span>
-                  <div className="text-right">
-                    <span className="text-gray-400 text-[9px] block mb-0.5">SCORE</span>
-                    <span className="text-indigo-700 font-black font-mono">{sub.score}</span>
-                  </div>
-                </div>
-              ))}
+         <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-100 shadow-inner">
+  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">交代履歴</h4>
+  <div className="space-y-2">
+    {(currentSet.substitutions || []).map(sub => (
+      <div key={sub.id} className="text-xs flex items-center justify-between border-b-2 border-white pb-2 font-bold group">
+        <span className="flex items-center gap-2">
+          <span className="text-red-500 bg-red-50 px-2 py-1 rounded-lg">{sub.outPlayerName}</span>
+          <span className="text-gray-300">▶</span>
+          <span className="text-green-600 bg-green-50 px-2 py-1 rounded-lg">{sub.inPlayerName}</span>
+        </span>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <span className="text-gray-400 text-[9px] block mb-0.5">SCORE</span>
+            <span className="text-indigo-700 font-black font-mono">{sub.score}</span>
+          </div>
+          <button
+            onClick={() => deleteSubstitution(sub.id)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white p-1.5 rounded-lg hover:bg-red-600 active:scale-90 no-print"
+            title="この交代記録を削除"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    ))}
               {(currentSet.substitutions || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">交代履歴はありません</p>}
             </div>
           </div>
