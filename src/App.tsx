@@ -128,10 +128,11 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
-            <MatchList 
-              matches={filteredMatches} 
-              onSelect={setActiveMatchId} 
-            />
+           <MatchList 
+  matches={filteredMatches} 
+  onSelect={setActiveMatchId}
+  onDelete={deleteMatch}
+/>
           </>
         )}
       </main>
