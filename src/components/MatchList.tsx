@@ -51,7 +51,7 @@ const MatchList: React.FC<MatchListProps> = ({ matches, onSelect, onDelete }) =>
             <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
               match.result === 'win' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
             }`}>
-              {match.result === 'win' ? 'Win' : 'Loss'}
+              {match.result === 'win' ? 'WIN' : 'LOSE'}
             </div>
           </div>
           
