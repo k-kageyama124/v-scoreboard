@@ -31,8 +31,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     newSets[activeSetIndex] = { ...currentSet, ...data };
     onUpdate({ ...match, sets: newSets });
   };
-  
- const toggleResult = () => {
+
+  const toggleResult = () => {
     onUpdate({ ...match, result: match.result === 'win' ? 'loss' : 'win' });
   };
 
@@ -44,7 +44,6 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     }
   };
 
-  // サーブ権切り替え
   const toggleServeTurn = () => {
     updateSet({ serveTurn: currentSet.serveTurn === 'S' ? 'R' : 'S' });
   };
@@ -128,10 +127,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       timestamp: Date.now()
     };
 
-    // 新しい仕様：OUT選手は残し、IN選手を新しい行として追加
     const newLineup = [...currentSet.lineup, { ...inPlayer, isSubstituted: true }];
-
-    // ベンチから選択した場合は、ベンチから削除
     const newBench = bench.filter(p => p.id !== inPlayer?.id);
 
     updateSet({
@@ -190,18 +186,18 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
   return (
     <div className="space-y-6 pb-28">
       {/* 操作パネル */}
-      <<div className="flex gap-2 no-print">
-  <button onClick={exportImage} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
-    <Download size={18} /> 成績を画像で保存
-  </button>
-  <button 
-    onClick={toggleResult}
-    className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${match.result === 'win' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-red-500 text-white hover:bg-red-600'}`}
-  >
-    {match.result === 'win' ? 'WIN' : 'LOSE'}
-  </button>
-</div>
-      {/* スコア入力パネル */}
+      <div className="flex gap-2 no-print">
+        <button onClick={exportImage} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
+          <Download size={18} /> 成績を画像で保存
+        </button>
+        <button 
+          onClick={toggleResult}
+          className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${match.result === 'win' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-red-500 text-white hover:bg-red-600'}`}
+        >
+          {match.result === 'win' ? 'WIN' : 'LOSE'}
+        </button>
+      </div>
+           {/* スコア入力パネル */}
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100 no-print">
         <div className="flex items-center justify-between gap-6">
           <div className="flex-1 text-center space-y-3">
@@ -253,7 +249,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
              </div>
           </div>
         </div>
-   {/* 成績テーブル */}
+
+        {/* 成績テーブル */}
         <div className="border-2 border-gray-100 rounded-2xl overflow-hidden shadow-sm">
           <div className="grid grid-cols-[180px_1fr] bg-gray-50 border-b-2 border-gray-100 text-[11px] font-black text-gray-400 uppercase tracking-widest">
             <div className="p-3 border-r-2 border-gray-100">選手 / 成果</div>
@@ -330,8 +327,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
             })}
           </div>
         </div>
-
-        {/* 控え・交代履歴 */}
+      {/* 控え・交代履歴 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 shadow-inner">
             <div className="flex justify-between items-center mb-4">
@@ -382,7 +378,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
             </div>
           </div>
         </div>
-              {/* 記号凡例 */}
+
+        {/* 記号凡例 */}
         <div className="bg-gray-900 text-white p-6 rounded-2xl grid grid-cols-2 gap-4 text-[11px] shadow-lg">
           <div className="space-y-2 border-r border-white/10 pr-4">
             <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">◎</span><span className="opacity-70">セッターピンポイント</span></div>
