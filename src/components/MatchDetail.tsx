@@ -31,6 +31,10 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     newSets[activeSetIndex] = { ...currentSet, ...data };
     onUpdate({ ...match, sets: newSets });
   };
+  
+ const toggleResult = () => {
+    onUpdate({ ...match, result: match.result === 'win' ? 'loss' : 'win' });
+  };
 
   const adjustScore = (team: 'my' | 'opponent', delta: number) => {
     if (team === 'my') {
@@ -186,15 +190,17 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
   return (
     <div className="space-y-6 pb-28">
       {/* 操作パネル */}
-      <div className="flex gap-2 no-print">
-        <button onClick={exportImage} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
-          <Download size={18} /> 成績を画像で保存
-        </button>
-        <button onClick={() => window.print()} className="bg-white text-gray-700 px-6 py-3 rounded-xl font-bold border border-gray-200 shadow-sm hover:bg-gray-50 transition-all">
-          <Printer size={18} /> 印刷
-        </button>
-      </div>
-
+      <<div className="flex gap-2 no-print">
+  <button onClick={exportImage} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
+    <Download size={18} /> 成績を画像で保存
+  </button>
+  <button 
+    onClick={toggleResult}
+    className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${match.result === 'win' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-red-500 text-white hover:bg-red-600'}`}
+  >
+    {match.result === 'win' ? 'WIN' : 'LOSE'}
+  </button>
+</div>
       {/* スコア入力パネル */}
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100 no-print">
         <div className="flex items-center justify-between gap-6">
