@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Match, MatchSet, ServiceRecord, ServiceQuality, PointType, Substitution, Player } from '../types';
-import { Trash2, Star, UserPlus, Download, Printer, Edit3, PlusCircle, Plus, Minus, RotateCcw, RefreshCw } from 'lucide-react';
+import { Trash2, Star, UserPlus, Download, Edit3, PlusCircle, Plus, Minus, RotateCcw, RefreshCw } from 'lucide-react';
 
 interface MatchDetailProps {
   match: Match;
@@ -126,12 +126,17 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       score: currentScore,
       timestamp: Date.now()
     };
+
+    const newLineup = [...currentSet.lineup, { ...inPlayer, isSubstituted: true }];
+    const newBench = bench.filter(p => p.id !== inPlayer?.id);
+
     updateSet({
       lineup: newLineup,
       bench: newBench,
       substitutions: [...(currentSet.substitutions || []), sub]
     });
   };
+
   const removeSubstitution = (subId: string) => {
     if (!window.confirm('この交代記録を削除しますか？\n※選手の配置は元に戻りません。記録のみ削除されます。')) {
       return;
@@ -140,6 +145,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     const newSubstitutions = (currentSet.substitutions || []).filter(s => s.id !== subId);
     updateSet({ substitutions: newSubstitutions });
   };
+
   const exportImage = async () => {
     if (!recordRef.current) return;
     try {
@@ -200,7 +206,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
           {match.result === 'win' ? 'WIN' : 'LOSE'}
         </button>
       </div>
-           {/* スコア入力パネル */}
+
+      {/* スコア入力パネル */}
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100 no-print">
         <div className="flex items-center justify-between gap-6">
           <div className="flex-1 text-center space-y-3">
@@ -222,8 +229,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
           </div>
         </div>
       </div>
-
-      {/* 記録・出力エリア */}
+            {/* 記録・出力エリア */}
       <div ref={recordRef} className="bg-white p-8 rounded-3xl shadow-xl space-y-8 border border-gray-100">
         <div className="border-b-2 border-gray-100 pb-6 flex justify-between items-end">
           <div>
@@ -330,7 +336,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
             })}
           </div>
         </div>
-      {/* 控え・交代履歴 */}
+           {/* 控え・交代履歴 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 shadow-inner">
             <div className="flex justify-between items-center mb-4">
@@ -361,7 +367,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
               {(currentSet.bench || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">控え選手はいません</p>}
             </div>
           </div>
-         <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-100 shadow-inner">
+          <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-100 shadow-inner">
             <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">交代履歴</h4>
             <div className="space-y-2">
               {(currentSet.substitutions || []).map(sub => (
@@ -386,9 +392,6 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
                   </div>
                 </div>
               ))}
-              {(currentSet.substitutions || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">交代履歴はありません</p>}
-            </div>
-          </div>
               {(currentSet.substitutions || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">交代履歴はありません</p>}
             </div>
           </div>
@@ -425,4 +428,3 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
 };
 
 export default MatchDetail;
-        
