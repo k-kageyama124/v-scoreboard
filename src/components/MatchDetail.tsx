@@ -124,14 +124,11 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       timestamp: Date.now()
     };
 
-    // 新しい仕様：OUT選手をベンチに追加（記録を保持）
-    const newLineup = currentSet.lineup.map(p => 
-      p.id === lineupPlayerId ? { ...inPlayer!, isSubstituted: true } : p
-    );
+    // 新しい仕様：OUT選手は残し、IN選手を新しい行として追加
+    const newLineup = [...currentSet.lineup, { ...inPlayer, isSubstituted: true }];
 
-    // OUT選手をベンチに追加（既存の選手は残す）
-    let newBench = bench.filter(p => p.id !== inPlayer?.id);
-    newBench.push({ ...outPlayer, isSubstituted: true });
+    // ベンチから選択した場合は、ベンチから削除
+    const newBench = bench.filter(p => p.id !== inPlayer?.id);
 
     updateSet({
       lineup: newLineup,
@@ -139,7 +136,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       substitutions: [...(currentSet.substitutions || []), sub]
     });
   };
- const exportImage = async () => {
+
+  const exportImage = async () => {
     if (!recordRef.current) return;
     try {
       // @ts-ignore
@@ -249,8 +247,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
              </div>
           </div>
         </div>
-
-        {/* 成績テーブル */}
+   {/* 成績テーブル */}
         <div className="border-2 border-gray-100 rounded-2xl overflow-hidden shadow-sm">
           <div className="grid grid-cols-[180px_1fr] bg-gray-50 border-b-2 border-gray-100 text-[11px] font-black text-gray-400 uppercase tracking-widest">
             <div className="p-3 border-r-2 border-gray-100">選手 / 成果</div>
@@ -379,8 +376,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
             </div>
           </div>
         </div>
-
-        {/* 記号凡例 */}
+              {/* 記号凡例 */}
         <div className="bg-gray-900 text-white p-6 rounded-2xl grid grid-cols-2 gap-4 text-[11px] shadow-lg">
           <div className="space-y-2 border-r border-white/10 pr-4">
             <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">◎</span><span className="opacity-70">セッターピンポイント</span></div>
@@ -411,3 +407,4 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
 };
 
 export default MatchDetail;
+        
