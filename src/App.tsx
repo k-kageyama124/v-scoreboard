@@ -4,6 +4,8 @@ import MatchList from './components/MatchList';
 import MatchDetail from './components/MatchDetail';
 import MatchForm from './components/MatchForm';
 import { Plus, ChevronLeft, Search } from 'lucide-react';
+import { database } from './firebase';
+import { ref, onValue, set, remove } from 'firebase/database';
 
 const App: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -11,34 +13,44 @@ const App: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Firebaseからデータをリアルタイムで取得
   useEffect(() => {
-    const saved = localStorage.getItem('vb_matches');
-    if (saved) {
-      try {
-        setMatches(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse saved matches", e);
+    const matchesRef = ref(database, 'matches');
+    
+    const unsubscribe = onValue(matchesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const matchesArray = Object.keys(data).map(key => ({
+          ...data[key],
+          id: key
+        }));
+        setMatches(matchesArray);
+      } else {
+        setMatches([]);
       }
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('vb_matches', JSON.stringify(matches));
-  }, [matches]);
-
   const handleAddMatch = (data: Partial<Match>) => {
+    const newMatchId = crypto.randomUUID();
     const newMatch: Match = {
-      id: crypto.randomUUID(),
+      id: newMatchId,
       date: data.date || new Date().toISOString().split('T')[0],
       tournament: data.tournament || '',
       opponent: data.opponent || '',
-      result: data.result || 'win',
+      result: 'win',
       sets: [createEmptySet(1)],
       ...data
     } as Match;
-    setMatches([newMatch, ...matches]);
+
+    // Firebaseに保存
+    const matchRef = ref(database, `matches/${newMatchId}`);
+    set(matchRef, newMatch);
+
     setShowForm(false);
-    setActiveMatchId(newMatch.id);
+    setActiveMatchId(newMatchId);
   };
 
   const createEmptySet = (num: number): MatchSet => ({
@@ -58,12 +70,16 @@ const App: React.FC = () => {
   });
 
   const updateMatch = (updatedMatch: Match) => {
-    setMatches(matches.map(m => m.id === updatedMatch.id ? updatedMatch : m));
+    // Firebaseに保存
+    const matchRef = ref(database, `matches/${updatedMatch.id}`);
+    set(matchRef, updatedMatch);
   };
 
   const deleteMatch = (id: string) => {
     if (window.confirm('この試合データを削除してもよろしいですか？')) {
-      setMatches(matches.filter(m => m.id !== id));
+      // Firebaseから削除
+      const matchRef = ref(database, `matches/${id}`);
+      remove(matchRef);
       setActiveMatchId(null);
     }
   };
@@ -128,11 +144,11 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
-           <MatchList 
-  matches={filteredMatches} 
-  onSelect={setActiveMatchId}
-  onDelete={deleteMatch}
-/>
+            <MatchList 
+              matches={filteredMatches} 
+              onSelect={setActiveMatchId}
+              onDelete={deleteMatch}
+            />
           </>
         )}
       </main>
