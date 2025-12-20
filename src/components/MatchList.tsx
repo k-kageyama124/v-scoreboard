@@ -1,13 +1,21 @@
 import React from 'react';
 import { Match } from '../types';
-import { Calendar, Trophy, Users } from 'lucide-react';
+import { Calendar, Trophy, Users, Trash2 } from 'lucide-react';
 
 interface MatchListProps {
   matches: Match[];
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-const MatchList: React.FC<MatchListProps> = ({ matches, onSelect }) => {
+const MatchList: React.FC<MatchListProps> = ({ matches, onSelect, onDelete }) => {
+  const handleDelete = (e: React.MouseEvent, matchId: string, opponent: string) => {
+    e.stopPropagation(); // 親要素のonClickイベントを防ぐ
+    if (window.confirm(`${opponent}戦の試合データを削除しますか？\nこの操作は取り消せません。`)) {
+      onDelete(matchId);
+    }
+  };
+
   if (matches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-500">
@@ -24,8 +32,17 @@ const MatchList: React.FC<MatchListProps> = ({ matches, onSelect }) => {
         <div 
           key={match.id}
           onClick={() => onSelect(match.id)}
-          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-300 transition-all cursor-pointer active:scale-[0.98]"
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-300 transition-all cursor-pointer active:scale-[0.98] relative group"
         >
+          {/* 削除ボタン */}
+          <button
+            onClick={(e) => handleDelete(e, match.id, match.opponent)}
+            className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 active:scale-90 shadow-lg z-10"
+            title="この試合を削除"
+          >
+            <Trash2 size={16} />
+          </button>
+
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-2 text-indigo-600 font-bold">
               <Trophy size={18} />
