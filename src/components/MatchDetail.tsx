@@ -126,24 +126,20 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       score: currentScore,
       timestamp: Date.now()
     };
-const deleteSubstitution = (subId: string) => {
-  if (!window.confirm('この交代記録を削除しますか？\n※選手の配置は元に戻りません。記録のみ削除されます。')) {
-    return;
-  }
-  
-  const newSubstitutions = (currentSet.substitutions || []).filter(s => s.id !== subId);
-  updateSet({ substitutions: newSubstitutions });
-};
-    const newLineup = [...currentSet.lineup, { ...inPlayer, isSubstituted: true }];
-    const newBench = bench.filter(p => p.id !== inPlayer?.id);
-
     updateSet({
       lineup: newLineup,
       bench: newBench,
       substitutions: [...(currentSet.substitutions || []), sub]
     });
   };
-
+  const removeSubstitution = (subId: string) => {
+    if (!window.confirm('この交代記録を削除しますか？\n※選手の配置は元に戻りません。記録のみ削除されます。')) {
+      return;
+    }
+    
+    const newSubstitutions = (currentSet.substitutions || []).filter(s => s.id !== subId);
+    updateSet({ substitutions: newSubstitutions });
+  };
   const exportImage = async () => {
     if (!recordRef.current) return;
     try {
@@ -366,30 +362,33 @@ const deleteSubstitution = (subId: string) => {
             </div>
           </div>
          <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-100 shadow-inner">
-  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">交代履歴</h4>
-  <div className="space-y-2">
-    {(currentSet.substitutions || []).map(sub => (
-      <div key={sub.id} className="text-xs flex items-center justify-between border-b-2 border-white pb-2 font-bold group">
-        <span className="flex items-center gap-2">
-          <span className="text-red-500 bg-red-50 px-2 py-1 rounded-lg">{sub.outPlayerName}</span>
-          <span className="text-gray-300">▶</span>
-          <span className="text-green-600 bg-green-50 px-2 py-1 rounded-lg">{sub.inPlayerName}</span>
-        </span>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <span className="text-gray-400 text-[9px] block mb-0.5">SCORE</span>
-            <span className="text-indigo-700 font-black font-mono">{sub.score}</span>
+            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">交代履歴</h4>
+            <div className="space-y-2">
+              {(currentSet.substitutions || []).map(sub => (
+                <div key={sub.id} className="text-xs flex items-center justify-between border-b-2 border-white pb-2 font-bold group">
+                  <span className="flex items-center gap-2">
+                    <span className="text-red-500 bg-red-50 px-2 py-1 rounded-lg">{sub.outPlayerName}</span>
+                    <span className="text-gray-300">▶</span>
+                    <span className="text-green-600 bg-green-50 px-2 py-1 rounded-lg">{sub.inPlayerName}</span>
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <span className="text-gray-400 text-[9px] block mb-0.5">SCORE</span>
+                      <span className="text-indigo-700 font-black font-mono">{sub.score}</span>
+                    </div>
+                    <button
+                      onClick={() => removeSubstitution(sub.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white p-1.5 rounded-lg hover:bg-red-600 active:scale-90 no-print"
+                      title="この交代記録を削除"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {(currentSet.substitutions || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">交代履歴はありません</p>}
+            </div>
           </div>
-          <button
-            onClick={() => deleteSubstitution(sub.id)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white p-1.5 rounded-lg hover:bg-red-600 active:scale-90 no-print"
-            title="この交代記録を削除"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-    ))}
               {(currentSet.substitutions || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">交代履歴はありません</p>}
             </div>
           </div>
