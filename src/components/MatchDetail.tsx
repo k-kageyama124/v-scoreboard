@@ -126,7 +126,14 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       score: currentScore,
       timestamp: Date.now()
     };
-
+const deleteSubstitution = (subId: string) => {
+  if (!window.confirm('この交代記録を削除しますか？\n※選手の配置は元に戻りません。記録のみ削除されます。')) {
+    return;
+  }
+  
+  const newSubstitutions = (currentSet.substitutions || []).filter(s => s.id !== subId);
+  updateSet({ substitutions: newSubstitutions });
+};
     const newLineup = [...currentSet.lineup, { ...inPlayer, isSubstituted: true }];
     const newBench = bench.filter(p => p.id !== inPlayer?.id);
 
