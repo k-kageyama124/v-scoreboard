@@ -12,6 +12,7 @@ const MatchForm: React.FC<MatchFormProps> = ({ onSubmit, onClose }) => {
     date: new Date().toISOString().split('T')[0],
     tournament: '',
     opponent: '',
+    result: 'win' as 'win' | 'loss',
   });
 
   return (
@@ -58,6 +59,34 @@ const MatchForm: React.FC<MatchFormProps> = ({ onSubmit, onClose }) => {
               value={formData.opponent}
               onChange={e => setFormData({...formData, opponent: e.target.value})}
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">試合結果</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData({...formData, result: 'win'})}
+                className={`p-3 rounded-xl font-bold transition-all ${
+                  formData.result === 'win'
+                    ? 'bg-green-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                WIN
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({...formData, result: 'loss'})}
+                className={`p-3 rounded-xl font-bold transition-all ${
+                  formData.result === 'loss'
+                    ? 'bg-red-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                LOSE
+              </button>
+            </div>
           </div>
           
           <button 
