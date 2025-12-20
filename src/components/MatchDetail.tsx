@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Match, MatchSet, ServiceRecord, ServiceQuality, PointType, Substitution, Player } from '../types';
-import { Trash2, Star, UserPlus, Download, Printer, Edit3, PlusCircle, Plus, Minus, RotateCcw } from 'lucide-react';
+import { Trash2, Star, UserPlus, Download, Printer, Edit3, PlusCircle, Plus, Minus, RotateCcw, RefreshCw } from 'lucide-react';
 
 interface MatchDetailProps {
   match: Match;
@@ -17,7 +16,6 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
   const currentSet = match.sets[activeSetIndex];
   const recordRef = useRef<HTMLDivElement>(null);
 
-  // 初回読み込み時に不足しているプロパティを補完
   useEffect(() => {
     if (!currentSet.bench || !currentSet.substitutions || !currentSet.services) {
       updateSet({
@@ -42,6 +40,11 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     }
   };
 
+  // サーブ権切り替え
+  const toggleServeTurn = () => {
+    updateSet({ serveTurn: currentSet.serveTurn === 'S' ? 'R' : 'S' });
+  };
+
   const addBenchPlayer = () => {
     const name = window.prompt('控え選手の名前を入力してください');
     if (!name || name.trim() === '') return;
@@ -50,7 +53,6 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       name: name.trim(),
       isSubstituted: false
     };
-    // ステート更新のために新しい配列を生成
     const currentBench = currentSet.bench ? [...currentSet.bench] : [];
     updateSet({ bench: [...currentBench, newPlayer] });
   };
@@ -92,7 +94,6 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     let inPlayer: Player | undefined;
     const bench = currentSet.bench || [];
     
-    // スコアをこの瞬間に確定
     const currentScore = `${currentSet.myScore || 0}-${currentSet.opponentScore || 0}`;
 
     if (bench.length > 0) {
@@ -123,11 +124,14 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       timestamp: Date.now()
     };
 
+    // 新しい仕様：OUT選手をベンチに追加（記録を保持）
     const newLineup = currentSet.lineup.map(p => 
       p.id === lineupPlayerId ? { ...inPlayer!, isSubstituted: true } : p
     );
 
-    const newBench = bench.filter(p => p.id !== inPlayer?.id);
+    // OUT選手をベンチに追加（既存の選手は残す）
+    let newBench = bench.filter(p => p.id !== inPlayer?.id);
+    newBench.push({ ...outPlayer, isSubstituted: true });
 
     updateSet({
       lineup: newLineup,
@@ -135,8 +139,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
       substitutions: [...(currentSet.substitutions || []), sub]
     });
   };
-
-  const exportImage = async () => {
+ const exportImage = async () => {
     if (!recordRef.current) return;
     try {
       // @ts-ignore
@@ -233,7 +236,16 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
              <div className="h-12 w-px bg-gray-200"></div>
              <div className="text-center">
                <span className="text-[10px] block text-gray-400 font-black mb-1">SERVE</span>
-               <div className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-lg font-black">{currentSet.serveTurn}</div>
+               <button 
+                 onClick={toggleServeTurn}
+                 className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-lg font-black hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer no-print flex items-center gap-1"
+               >
+                 {currentSet.serveTurn}
+                 <RefreshCw size={14} className="opacity-50" />
+               </button>
+               <div className="print-only px-3 py-1 bg-indigo-600 text-white rounded-lg text-lg font-black hidden">
+                 {currentSet.serveTurn}
+               </div>
              </div>
           </div>
         </div>
@@ -326,15 +338,24 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {(currentSet.bench || []).map(p => (
-                <span key={p.id} className="bg-white px-4 py-2 rounded-xl text-xs font-black border-2 border-gray-100 flex items-center gap-2 shadow-sm group">
-                  {p.name}
-                  <Edit3 size={12} className="text-gray-300 opacity-0 group-hover:opacity-100 cursor-pointer no-print" onClick={() => {
-                    const n = window.prompt('選手名を変更', p.name);
-                    if(n && n.trim() !== '') handlePlayerNameChange(p.id, n.trim(), true);
-                  }} />
-                </span>
-              ))}
+              {(currentSet.bench || []).map(p => {
+                const benchMarkers = getPlayerMarkers(p.id);
+                return (
+                  <span key={p.id} className="bg-white px-4 py-2 rounded-xl text-xs font-black border-2 border-gray-100 flex items-center gap-2 shadow-sm group">
+                    {p.name}
+                    {(benchMarkers.redStars > 0 || benchMarkers.blackStars > 0 || benchMarkers.hasRound1) && (
+                      <span className="text-[10px] text-gray-400">
+                        ({benchMarkers.hasRound2 ? '✓✓' : benchMarkers.hasRound1 ? '✓' : ''} 
+                        {benchMarkers.redStars > 0 && `★${benchMarkers.redStars}`})
+                      </span>
+                    )}
+                    <Edit3 size={12} className="text-gray-300 opacity-0 group-hover:opacity-100 cursor-pointer no-print" onClick={() => {
+                      const n = window.prompt('選手名を変更', p.name);
+                      if(n && n.trim() !== '') handlePlayerNameChange(p.id, n.trim(), true);
+                    }} />
+                  </span>
+                );
+              })}
               {(currentSet.bench || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">控え選手はいません</p>}
             </div>
           </div>
@@ -370,6 +391,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
             <div className="flex gap-3 items-center"><span className="text-red-500 font-black text-lg leading-none">★</span><span className="opacity-70">ノータッチ / 相手弾く</span></div>
             <div className="flex gap-3 items-center"><span className="text-gray-100 font-black text-lg leading-none">★</span><span className="opacity-70">取られたが繋がらず</span></div>
             <div className="flex gap-3 items-center"><span className="text-green-400 font-black text-lg leading-none">✓</span><span className="opacity-70">1巡目 / 2巡目(✓✓)</span></div>
+            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">S</span><span className="opacity-70">先行（サーブ権あり）</span></div>
+            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">R</span><span className="opacity-70">後攻（レシーブから）</span></div>
           </div>
         </div>
       </div>
