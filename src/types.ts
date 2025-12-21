@@ -60,5 +60,5 @@ export interface Match {
   tournament: string;
   opponent: string;
   sets: MatchSet[];
-  result: 'win' | 'lose';
+  result: 'win' | 'loss';
 }
