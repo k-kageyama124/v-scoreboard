@@ -42,20 +42,15 @@ const App: React.FC = () => {
   };
 
   const createEmptySet = (num: number): MatchSet => ({
-    id: crypto.randomUUID(),
-    setNumber: num,
-    myScore: 0,
-    opponentScore: 0,
-    serveTurn: 'S',
-    lineup: Array.from({ length: 6 }, (_, i) => ({
-      id: crypto.randomUUID(),
-      name: `選手 ${i + 1}`,
-      isSubstituted: false
-    })),
-    bench: [],
-    services: [],
-    substitutions: []
-  });
+  ourScore: 0,
+  opponentScore: 0,
+  serveTurn: 'our',
+  players: [],
+  serves: [],
+  receives: [],
+  substitutions: [],
+  currentRound: 1
+});
 
   const updateMatch = (updatedMatch: Match) => {
     setMatches(matches.map(m => m.id === updatedMatch.id ? updatedMatch : m));
