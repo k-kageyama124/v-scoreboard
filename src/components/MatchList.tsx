@@ -29,8 +29,8 @@ const MatchList: React.FC<MatchListProps> = ({ matches, onSelect, onDelete }) =>
   return (
     <div className="grid gap-4">
       {matches.map(match => {
-        // 防御的プログラミング: setsが存在しない場合のデフォルト値
-        const firstSet = match.sets && match.sets[0] ? match.sets[0] : { ourScore: 0, opponentScore: 0 };
+        // 防御的プログラミング
+        const firstSet = (match.sets && match.sets.length > 0) ? match.sets[0] : null;
         
         return (
           <div 
@@ -71,9 +71,13 @@ const MatchList: React.FC<MatchListProps> = ({ matches, onSelect, onDelete }) =>
               </div>
               
               <div className="text-right">
-                <span className="text-2xl font-black text-gray-900">
-                  {firstSet.ourScore} - {firstSet.opponentScore}
-                </span>
+                {firstSet ? (
+                  <span className="text-2xl font-black text-gray-900">
+                    {firstSet.ourScore || 0} - {firstSet.opponentScore || 0}
+                  </span>
+                ) : (
+                  <span className="text-sm text-gray-400">スコアなし</span>
+                )}
               </div>
             </div>
           </div>
