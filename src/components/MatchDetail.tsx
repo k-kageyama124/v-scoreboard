@@ -1,29 +1,3 @@
-const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) => {
-  const [currentSetIndex, setCurrentSetIndex] = useState(0);
-  const [benchPlayerName, setBenchPlayerName] = useState('');
-  const [inPlayerName, setInPlayerName] = useState('');
-  const [addingPlayer, setAddingPlayer] = useState<string | null>(null);
-  
-  // 防御的プログラミング: setsが存在しない、または空の配列の場合
-  if (!match.sets || match.sets.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-          <h2 className="text-red-800 font-bold text-lg mb-2">データエラー</h2>
-          <p className="text-red-600 mb-4">この試合にはセットデータがありません。</p>
-          <button
-            onClick={onBack}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700"
-          >
-            戻る
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const currentSet = match.sets[currentSetIndex];
-
 import React, { useState, useEffect } from 'react';
 import { Match, MatchSet, Player, SubstitutionRecord, ServeQuality, ServeRecord, ReceiveQuality, ReceiveRecord } from '../types';
 import { ArrowLeft, RotateCw, X, Trash2, Undo } from 'lucide-react';
