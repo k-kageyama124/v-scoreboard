@@ -232,7 +232,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
             </div>
           </div>
         </div>
-           {/* ラウンド管理 */}
+         {/* ラウンド管理 */}
         <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -492,7 +492,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
             </div>
           ))}
         </div>
-           {/* 選手交代 */}
+          {/* 選手交代 */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-100">
           <h3 className="text-2xl font-black text-gray-800 mb-6 flex items-center gap-3">
             <RotateCw size={28} className="text-indigo-600" />
@@ -610,8 +610,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
               ))}
             </div>
           </div>
-           )}
-          {/* 凡例 */}
+        )}
+         {/* 凡例 */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-100">
           <h3 className="text-2xl font-black text-gray-800 mb-6">記号の意味</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
