@@ -12,23 +12,43 @@ const App: React.FC = () => {
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Firebaseからデータをリアルタイムで取得
   useEffect(() => {
     const matchesRef = ref(database, 'matches');
     
-    const unsubscribe = onValue(matchesRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const matchesArray = Object.keys(data).map(key => ({
-          ...data[key],
-          id: key
-        }));
-        setMatches(matchesArray);
-      } else {
+    const unsubscribe = onValue(
+      matchesRef, 
+      (snapshot) => {
+        try {
+          const data = snapshot.val();
+          if (data) {
+            const matchesArray = Object.keys(data).map(key => ({
+              ...data[key],
+              id: key
+            }));
+            setMatches(matchesArray);
+          } else {
+            setMatches([]);
+          }
+          setError(null);
+        } catch (err) {
+          console.error('データ取得エラー:', err);
+          setError('データの取得に失敗しました');
+          setMatches([]);
+        } finally {
+          setLoading(false);
+        }
+      },
+      (err) => {
+        console.error('Firebase接続エラー:', err);
+        setError('Firebaseへの接続に失敗しました。ルール設定を確認してください。');
         setMatches([]);
+        setLoading(false);
       }
-    });
+    );
 
     return () => unsubscribe();
   }, []);
@@ -47,10 +67,15 @@ const App: React.FC = () => {
 
     // Firebaseに保存
     const matchRef = ref(database, `matches/${newMatchId}`);
-    set(matchRef, newMatch);
-
-    setShowForm(false);
-    setActiveMatchId(newMatchId);
+    set(matchRef, newMatch)
+      .then(() => {
+        setShowForm(false);
+        setActiveMatchId(newMatchId);
+      })
+      .catch((err) => {
+        console.error('保存エラー:', err);
+        alert('データの保存に失敗しました');
+      });
   };
 
   const createEmptySet = (): MatchSet => ({
@@ -65,30 +90,74 @@ const App: React.FC = () => {
   });
 
   const updateMatch = (updatedMatch: Match) => {
-    // Firebaseに保存
     const matchRef = ref(database, `matches/${updatedMatch.id}`);
-    set(matchRef, updatedMatch);
+    set(matchRef, updatedMatch)
+      .catch((err) => {
+        console.error('更新エラー:', err);
+        alert('データの更新に失敗しました');
+      });
   };
 
   const deleteMatch = (id: string) => {
     if (window.confirm('この試合データを削除してもよろしいですか？')) {
-      // Firebaseから削除
       const matchRef = ref(database, `matches/${id}`);
-      remove(matchRef);
-      setActiveMatchId(null);
+      remove(matchRef)
+        .then(() => {
+          setActiveMatchId(null);
+        })
+        .catch((err) => {
+          console.error('削除エラー:', err);
+          alert('データの削除に失敗しました');
+        });
     }
   };
 
-  // 検索機能
-  const filteredMatches = matches.filter(match => {
-  const query = searchQuery.toLowerCase();
-  return (
-    (match.tournamentName || '').toLowerCase().includes(query) ||
-    (match.opponent || '').toLowerCase().includes(query)
-  );
-});
+  // 検索機能（配列がundefinedの場合に対応）
+  const filteredMatches = Array.isArray(matches) ? matches.filter(match => {
+    const query = searchQuery.toLowerCase();
+    return (
+      (match.tournamentName || '').toLowerCase().includes(query) ||
+      (match.opponent || '').toLowerCase().includes(query)
+    );
+  }) : [];
 
   const activeMatch = matches.find(m => m.id === activeMatchId);
+
+  // ローディング表示
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-700 mx-auto mb-4"></div>
+          <p className="text-gray-600">データを読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // エラー表示
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <h2 className="text-red-800 font-bold text-lg mb-2">エラーが発生しました</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-sm text-red-500">
+            Firebase Consoleでデータベースのルール設定を確認してください。
+            <br/>
+            <a 
+              href="https://console.firebase.google.com/project/scoreboard-92ed4/database" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline hover:text-red-700"
+            >
+              Firebase Consoleを開く
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
