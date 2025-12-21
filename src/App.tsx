@@ -38,10 +38,10 @@ const App: React.FC = () => {
     const newMatch: Match = {
       id: newMatchId,
       date: data.date || new Date().toISOString().split('T')[0],
-     tournamentName: data.tournamentName || '',
+      tournamentName: data.tournamentName || '',
       opponent: data.opponent || '',
       result: 'win',
-      sets: [createEmptySet(1)],
+      sets: [createEmptySet()],
       ...data
     } as Match;
 
@@ -53,21 +53,15 @@ const App: React.FC = () => {
     setActiveMatchId(newMatchId);
   };
 
-  const createEmptySet = (num: number): MatchSet => ({
-    id: crypto.randomUUID(),
-    setNumber: num,
-    myScore: 0,
+  const createEmptySet = (): MatchSet => ({
+    ourScore: 0,
     opponentScore: 0,
-    serveTurn: 'S',
-    lineup: Array.from({ length: 6 }, (_, i) => ({
-      id: crypto.randomUUID(),
-      name: `選手 ${i + 1}`,
-      isSubstituted: false
-    })),
-    bench: [],
-    services: [],
-     receives: [],
-    substitutions: []
+    serveTurn: 'our',
+    players: [],
+    serves: [],
+    receives: [],
+    substitutions: [],
+    currentRound: 1
   });
 
   const updateMatch = (updatedMatch: Match) => {
@@ -89,7 +83,7 @@ const App: React.FC = () => {
   const filteredMatches = matches.filter(match => {
     const query = searchQuery.toLowerCase();
     return (
-     match.tournamentName.toLowerCase().includes(query) ||
+      match.tournamentName.toLowerCase().includes(query) ||
       match.opponent.toLowerCase().includes(query)
     );
   });
@@ -124,10 +118,10 @@ const App: React.FC = () => {
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-4">
         {activeMatchId && activeMatch ? (
-        <MatchDetail 
-  match={activeMatch} 
-  onUpdate={updateMatch} 
-  onBack={() => setActiveMatchId(null)}
+          <MatchDetail 
+            match={activeMatch} 
+            onUpdate={updateMatch} 
+            onBack={() => setActiveMatchId(null)}
           />
         ) : (
           <>
