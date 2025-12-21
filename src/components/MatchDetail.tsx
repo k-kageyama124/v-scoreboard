@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Match, MatchSet, ServiceRecord, ServiceQuality, PointType, Substitution, Player } from '../types';
+import { Match, MatchSet, ServiceRecord, ReceiveRecord, ServiceQuality, ReceiveQuality, PointType, Substitution, Player } from '../types';
 import { Trash2, Star, UserPlus, Download, Edit3, PlusCircle, Plus, Minus, RotateCcw, RefreshCw } from 'lucide-react';
 
 interface MatchDetailProps {
@@ -17,11 +17,12 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
   const recordRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!currentSet.bench || !currentSet.substitutions || !currentSet.services) {
+    if (!currentSet.bench || !currentSet.substitutions || !currentSet.services || !currentSet.receives) {
       updateSet({
         bench: currentSet.bench || [],
         substitutions: currentSet.substitutions || [],
-        services: currentSet.services || []
+        services: currentSet.services || [],
+        receives: currentSet.receives || []
       });
     }
   }, [activeSetIndex]);
@@ -87,6 +88,25 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
 
     updateSet({
       services: [...(currentSet.services || []), newService]
+    });
+  };
+
+  const addReceive = (playerId: string, quality: ReceiveQuality) => {
+    const player = currentSet.lineup.find(p => p.id === playerId);
+    if (!player) return;
+
+    const currentRound = playerRounds[playerId] || 1;
+    const newReceive: ReceiveRecord = {
+      id: crypto.randomUUID(),
+      playerId,
+      playerName: player.name,
+      quality,
+      round: currentRound,
+      timestamp: Date.now()
+    };
+
+    updateSet({
+      receives: [...(currentSet.receives || []), newReceive]
     });
   };
 
@@ -192,6 +212,13 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     }
   };
 
+  const undoLastReceive = () => {
+    if (!currentSet.receives || currentSet.receives.length === 0) return;
+    if(confirm('最後のサーブレシーブ記録を取り消しますか？')) {
+      updateSet({ receives: currentSet.receives.slice(0, -1) });
+    }
+  };
+
   return (
     <div className="space-y-6 pb-28">
       {/* 操作パネル */}
@@ -229,7 +256,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
           </div>
         </div>
       </div>
-            {/* 記録・出力エリア */}
+  {/* 記録・出力エリア */}
       <div ref={recordRef} className="bg-white p-8 rounded-3xl shadow-xl space-y-8 border border-gray-100">
         <div className="border-b-2 border-gray-100 pb-6 flex justify-between items-end">
           <div>
@@ -261,19 +288,21 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
 
         {/* 成績テーブル */}
         <div className="border-2 border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-          <div className="grid grid-cols-[180px_1fr] bg-gray-50 border-b-2 border-gray-100 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+          <div className="grid grid-cols-[180px_1fr_1fr] bg-gray-50 border-b-2 border-gray-100 text-[11px] font-black text-gray-400 uppercase tracking-widest">
             <div className="p-3 border-r-2 border-gray-100">選手 / 成果</div>
-            <div className="p-3">サーブ詳細記録</div>
+            <div className="p-3 border-r-2 border-gray-100">サーブ記録</div>
+            <div className="p-3">サーブレシーブ</div>
           </div>
           <div className="divide-y-2 divide-gray-100">
             {currentSet.lineup.map((player) => {
               const markers = getPlayerMarkers(player.id);
               const services = (currentSet.services || []).filter(s => s.playerId === player.id);
+              const receives = (currentSet.receives || []).filter(r => r.playerId === player.id);
               const isEditing = editingPlayerId === player.id;
               const currentRound = playerRounds[player.id] || 1;
               
               return (
-                <div key={player.id} className="grid grid-cols-[180px_1fr] min-h-[120px]">
+                <div key={player.id} className="grid grid-cols-[180px_1fr_1fr] min-h-[120px]">
                   <div className="p-4 border-r-2 border-gray-100 bg-white relative flex flex-col justify-between">
                     <div>
                       <div className="flex items-center gap-1 group mb-2">
@@ -311,7 +340,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
                     </div>
                   </div>
 
-                  <div className="p-4 bg-white flex flex-col gap-4">
+                  {/* サーブ記録列 */}
+                  <div className="p-4 bg-white flex flex-col gap-4 border-r-2 border-gray-100">
                     <div className="flex flex-wrap gap-2 min-h-[44px]">
                       {services.map(s => (
                         <div key={s.id} className="w-11 h-11 flex flex-col items-center justify-center border-2 border-gray-100 rounded-xl bg-gray-50 text-base font-black shadow-sm">
@@ -331,12 +361,32 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
                       <button onClick={() => addService(player.id, 'pinpoint', 'black_star')} className="px-4 h-11 rounded-xl bg-gray-800 text-white text-[11px] font-black shadow-md hover:bg-black active:scale-90 transition-all">黒★</button>
                     </div>
                   </div>
+
+                  {/* サーブレシーブ列 */}
+                  <div className="p-4 bg-white flex flex-col gap-4">
+                    <div className="flex flex-wrap gap-2 min-h-[44px]">
+                      {receives.map(r => (
+                        <div key={r.id} className="w-11 h-11 flex items-center justify-center border-2 border-gray-100 rounded-xl bg-gray-50 text-base font-black shadow-sm">
+                          <span className="leading-none">
+                            {r.quality === 'perfect' ? '◎' : r.quality === 'good' ? '○' : r.quality === 'follow' ? '△' : '×'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 no-print mt-auto">
+                      <button onClick={() => addReceive(player.id, 'perfect')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">◎</button>
+                      <button onClick={() => addReceive(player.id, 'good')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">○</button>
+                      <button onClick={() => addReceive(player.id, 'follow')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">△</button>
+                      <button onClick={() => addReceive(player.id, 'miss')} className="w-11 h-11 rounded-xl bg-red-50 text-red-700 font-black border-2 border-red-100 hover:bg-red-100 active:scale-90 transition-all shadow-sm">×</button>
+                    </div>
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
-           {/* 控え・交代履歴 */}
+         {/* 控え・交代履歴 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 shadow-inner">
             <div className="flex justify-between items-center mb-4">
@@ -398,13 +448,23 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
         </div>
 
         {/* 記号凡例 */}
-        <div className="bg-gray-900 text-white p-6 rounded-2xl grid grid-cols-2 gap-4 text-[11px] shadow-lg">
+        <div className="bg-gray-900 text-white p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] shadow-lg">
           <div className="space-y-2 border-r border-white/10 pr-4">
+            <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">サーブ</div>
             <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">◎</span><span className="opacity-70">セッターピンポイント</span></div>
             <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">○</span><span className="opacity-70">セッターが動く</span></div>
             <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">△</span><span className="opacity-70">セッター以外</span></div>
+            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">×</span><span className="opacity-70">サーブミス</span></div>
+          </div>
+          <div className="space-y-2 border-r border-white/10 pr-4">
+            <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">サーブレシーブ</div>
+            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">◎</span><span className="opacity-70">セッターに返せた</span></div>
+            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">○</span><span className="opacity-70">返したがセッター以外</span></div>
+            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">△</span><span className="opacity-70">フォローでつながった</span></div>
+            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">×</span><span className="opacity-70">レシーブ失敗</span></div>
           </div>
           <div className="space-y-2 pl-2">
+            <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">共通</div>
             <div className="flex gap-3 items-center"><span className="text-red-500 font-black text-lg leading-none">★</span><span className="opacity-70">ノータッチ / 相手弾く</span></div>
             <div className="flex gap-3 items-center"><span className="text-gray-100 font-black text-lg leading-none">★</span><span className="opacity-70">取られたが繋がらず</span></div>
             <div className="flex gap-3 items-center"><span className="text-green-400 font-black text-lg leading-none">✓</span><span className="opacity-70">1巡目 / 2巡目(✓✓)</span></div>
@@ -413,14 +473,21 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
           </div>
         </div>
       </div>
-
-      {/* 取り消しボタン */}
-      <div className="fixed bottom-8 right-8 no-print">
-        <button onClick={undoLastService} 
-          className="bg-red-500 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center font-black hover:bg-red-600 active:scale-95 transition-all group"
-          title="一手戻す"
+         {/* 取り消しボタン */}
+      <div className="fixed bottom-8 right-8 no-print flex flex-col gap-3">
+        <button onClick={undoLastReceive} 
+          className="bg-green-500 text-white w-16 h-16 rounded-full shadow-2xl flex flex-col items-center justify-center font-black hover:bg-green-600 active:scale-95 transition-all group"
+          title="レシーブ記録を一手戻す"
         >
-          <RotateCcw className="group-hover:-rotate-45 transition-transform" />
+          <RotateCcw size={20} className="group-hover:-rotate-45 transition-transform" />
+          <span className="text-[8px] mt-0.5">RCV</span>
+        </button>
+        <button onClick={undoLastService} 
+          className="bg-red-500 text-white w-16 h-16 rounded-full shadow-2xl flex flex-col items-center justify-center font-black hover:bg-red-600 active:scale-95 transition-all group"
+          title="サーブ記録を一手戻す"
+        >
+          <RotateCcw size={20} className="group-hover:-rotate-45 transition-transform" />
+          <span className="text-[8px] mt-0.5">SRV</span>
         </button>
       </div>
     </div>
@@ -428,3 +495,4 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
 };
 
 export default MatchDetail;
+      
