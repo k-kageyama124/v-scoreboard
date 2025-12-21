@@ -286,9 +286,200 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
           </div>
         </div>
 
-        {/* 成績テーブル */}
+    {/* 成績テーブル */}
         <div className="border-2 border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-          <div className="grid grid-cols-[180px_1fr_1fr] bg-gray-50 border-b-2 border-gray-100 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+          {/* PC版ヘッダー */}
+          <div className="hidden md:grid grid-cols-[180px_1fr_1fr] bg-gray-50 border-b-2 border-gray-100 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+            <div className="p-3 border-r-2 border-gray-100">選手 / 成果</div>
+            <div className="p-3 border-r-2 border-gray-100">サーブ記録</div>
+            <div className="p-3">サーブレシーブ</div>
+          </div>
+          <div className="divide-y-2 divide-gray-100">
+            {currentSet.lineup.map((player) => {
+              const markers = getPlayerMarkers(player.id);
+              const services = (currentSet.services || []).filter(s => s.playerId === player.id);
+              const receives = (currentSet.receives || []).filter(r => r.playerId === player.id);
+              const isEditing = editingPlayerId === player.id;
+              const currentRound = playerRounds[player.id] || 1;
+              
+              return (
+                <div key={player.id}>
+                  {/* PC版: 3列レイアウト */}
+                  <div className="hidden md:grid grid-cols-[180px_1fr_1fr] min-h-[120px]">
+                    <div className="p-4 border-r-2 border-gray-100 bg-white relative flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-1 group mb-2">
+                          {isEditing ? (
+                            <input autoFocus className="font-bold border-b-2 border-indigo-500 outline-none w-full py-1 text-lg" value={player.name} onChange={(e) => handlePlayerNameChange(player.id, e.target.value)} onBlur={() => setEditingPlayerId(null)} />
+                          ) : (
+                            <span className="font-black text-gray-800 cursor-pointer hover:text-indigo-600 flex items-center gap-2 text-lg" onClick={() => setEditingPlayerId(player.id)}>
+                              {player.name} <Edit3 size={12} className="text-gray-300 no-print" />
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <div className="flex items-center text-green-600 font-black text-lg min-w-[30px]">
+                            {markers.hasRound2 ? '✓✓' : markers.hasRound1 ? '✓' : ''}
+                          </div>
+                          <div className="flex gap-1">
+                            {Array.from({ length: markers.redStars }).map((_, i) => <span key={i} className="text-red-500 text-xl leading-none">★</span>)}
+                            {Array.from({ length: markers.blackStars }).map((_, i) => <span key={i} className="text-gray-900 text-xl leading-none">★</span>)}
+                            {Array.from({ length: markers.misses }).map((_, i) => <span key={i} className="text-gray-300 font-black text-xl leading-none">―</span>)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between no-print mt-4">
+                        <button 
+                          onClick={() => toggleRound(player.id)}
+                          className={`text-[10px] font-black px-3 py-1 rounded-full transition-all shadow-sm ${currentRound === 2 ? 'bg-indigo-600 text-white scale-105' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                        >
+                          {currentRound}巡目
+                        </button>
+                        <button onClick={() => handleSubstitution(player.id)} className="text-gray-300 hover:text-indigo-600 p-1">
+                          <UserPlus size={18} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* PC版: サーブ記録列 */}
+                    <div className="p-4 bg-white flex flex-col gap-4 border-r-2 border-gray-100">
+                      <div className="flex flex-wrap gap-2 min-h-[44px]">
+                        {services.map(s => (
+                          <div key={s.id} className="w-11 h-11 flex flex-col items-center justify-center border-2 border-gray-100 rounded-xl bg-gray-50 text-base font-black shadow-sm">
+                            <span className="leading-none">{s.quality === 'pinpoint' ? '◎' : s.quality === 'setter_move' ? '○' : s.quality === 'other' ? '△' : '×'}</span>
+                            {s.pointType !== 'none' && <span className={`${s.pointType === 'red_star' ? 'text-red-500' : 'text-gray-900'} text-[9px] mt-0.5 leading-none`}>★</span>}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 no-print mt-auto">
+                        <button onClick={() => addService(player.id, 'pinpoint', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">◎</button>
+                        <button onClick={() => addService(player.id, 'setter_move', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">○</button>
+                        <button onClick={() => addService(player.id, 'other', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">△</button>
+                        <button onClick={() => addService(player.id, 'miss', 'none')} className="w-11 h-11 rounded-xl bg-red-50 text-red-700 font-black border-2 border-red-100 hover:bg-red-100 active:scale-90 transition-all shadow-sm">×</button>
+                        <div className="w-px h-11 bg-gray-200 mx-1"></div>
+                        <button onClick={() => addService(player.id, 'pinpoint', 'red_star')} className="px-4 h-11 rounded-xl bg-red-600 text-white text-[11px] font-black shadow-md hover:bg-red-700 active:scale-90 transition-all">赤★</button>
+                        <button onClick={() => addService(player.id, 'pinpoint', 'black_star')} className="px-4 h-11 rounded-xl bg-gray-800 text-white text-[11px] font-black shadow-md hover:bg-black active:scale-90 transition-all">黒★</button>
+                      </div>
+                    </div>
+
+                    {/* PC版: サーブレシーブ列 */}
+                    <div className="p-4 bg-white flex flex-col gap-4">
+                      <div className="flex flex-wrap gap-2 min-h-[44px]">
+                        {receives.map(r => (
+                          <div key={r.id} className="w-11 h-11 flex items-center justify-center border-2 border-gray-100 rounded-xl bg-gray-50 text-base font-black shadow-sm">
+                            <span className="leading-none">
+                              {r.quality === 'perfect' ? '◎' : r.quality === 'good' ? '○' : r.quality === 'follow' ? '△' : '×'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 no-print mt-auto">
+                        <button onClick={() => addReceive(player.id, 'perfect')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">◎</button>
+                        <button onClick={() => addReceive(player.id, 'good')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">○</button>
+                        <button onClick={() => addReceive(player.id, 'follow')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">△</button>
+                        <button onClick={() => addReceive(player.id, 'miss')} className="w-11 h-11 rounded-xl bg-red-50 text-red-700 font-black border-2 border-red-100 hover:bg-red-100 active:scale-90 transition-all shadow-sm">×</button>
+                      </div>
+                    </div>
+                  </div>
+                       {/* スマホ版: 縦積みレイアウト */}
+                  <div className="md:hidden bg-white">
+                    {/* 選手情報ヘッダー */}
+                    <div className="p-4 bg-gray-50 border-b-2 border-gray-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {isEditing ? (
+                            <input autoFocus className="font-bold border-b-2 border-indigo-500 outline-none py-1 text-xl w-32" value={player.name} onChange={(e) => handlePlayerNameChange(player.id, e.target.value)} onBlur={() => setEditingPlayerId(null)} />
+                          ) : (
+                            <span className="font-black text-gray-800 cursor-pointer text-xl" onClick={() => setEditingPlayerId(player.id)}>
+                              {player.name}
+                            </span>
+                          )}
+                          <Edit3 size={14} className="text-gray-300 no-print" onClick={() => setEditingPlayerId(player.id)} />
+                        </div>
+                        <button onClick={() => handleSubstitution(player.id)} className="text-gray-400 hover:text-indigo-600 p-2 no-print">
+                          <UserPlus size={20} />
+                        </button>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="text-green-600 font-black text-lg">
+                          {markers.hasRound2 ? '✓✓' : markers.hasRound1 ? '✓' : ''}
+                        </div>
+                        <div className="flex gap-1">
+                          {Array.from({ length: markers.redStars }).map((_, i) => <span key={i} className="text-red-500 text-xl">★</span>)}
+                          {Array.from({ length: markers.blackStars }).map((_, i) => <span key={i} className="text-gray-900 text-xl">★</span>)}
+                          {Array.from({ length: markers.misses }).map((_, i) => <span key={i} className="text-gray-300 font-black text-xl">―</span>)}
+                        </div>
+                        <button 
+                          onClick={() => toggleRound(player.id)}
+                          className={`ml-auto text-xs font-black px-3 py-1.5 rounded-full no-print ${currentRound === 2 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}
+                        >
+                          {currentRound}巡目
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* サーブ記録セクション */}
+                    <div className="p-4 border-b-2 border-gray-100">
+                      <h4 className="text-xs font-black text-indigo-600 uppercase tracking-wider mb-3">サーブ記録</h4>
+                      
+                      {/* 記録表示 */}
+                      <div className="flex flex-wrap gap-2 mb-3 min-h-[56px]">
+                        {services.map(s => (
+                          <div key={s.id} className="w-14 h-14 flex flex-col items-center justify-center border-2 border-gray-200 rounded-xl bg-gray-50 text-lg font-black shadow-sm">
+                            <span className="leading-none">{s.quality === 'pinpoint' ? '◎' : s.quality === 'setter_move' ? '○' : s.quality === 'other' ? '△' : '×'}</span>
+                            {s.pointType !== 'none' && <span className={`${s.pointType === 'red_star' ? 'text-red-500' : 'text-gray-900'} text-xs mt-1`}>★</span>}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 入力ボタン */}
+                      <div className="flex flex-wrap gap-2 no-print">
+                        <button onClick={() => addService(player.id, 'pinpoint', 'none')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-indigo-50 text-indigo-700 font-black text-xl border-2 border-indigo-200 active:bg-indigo-100">◎</button>
+                        <button onClick={() => addService(player.id, 'setter_move', 'none')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-indigo-50 text-indigo-700 font-black text-xl border-2 border-indigo-200 active:bg-indigo-100">○</button>
+                        <button onClick={() => addService(player.id, 'other', 'none')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-indigo-50 text-indigo-700 font-black text-xl border-2 border-indigo-200 active:bg-indigo-100">△</button>
+                        <button onClick={() => addService(player.id, 'miss', 'none')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-red-50 text-red-700 font-black text-xl border-2 border-red-200 active:bg-red-100">×</button>
+                      </div>
+                      <div className="flex gap-2 mt-2 no-print">
+                        <button onClick={() => addService(player.id, 'pinpoint', 'red_star')} className="flex-1 h-12 rounded-xl bg-red-600 text-white text-sm font-black shadow-md active:bg-red-700">赤★</button>
+                        <button onClick={() => addService(player.id, 'pinpoint', 'black_star')} className="flex-1 h-12 rounded-xl bg-gray-800 text-white text-sm font-black shadow-md active:bg-black">黒★</button>
+                      </div>
+                    </div>
+
+                    {/* サーブレシーブセクション */}
+                    <div className="p-4">
+                      <h4 className="text-xs font-black text-green-600 uppercase tracking-wider mb-3">サーブレシーブ</h4>
+                      
+                      {/* 記録表示 */}
+                      <div className="flex flex-wrap gap-2 mb-3 min-h-[56px]">
+                        {receives.map(r => (
+                          <div key={r.id} className="w-14 h-14 flex items-center justify-center border-2 border-gray-200 rounded-xl bg-gray-50 text-lg font-black shadow-sm">
+                            <span className="leading-none">
+                              {r.quality === 'perfect' ? '◎' : r.quality === 'good' ? '○' : r.quality === 'follow' ? '△' : '×'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 入力ボタン */}
+                      <div className="flex flex-wrap gap-2 no-print">
+                        <button onClick={() => addReceive(player.id, 'perfect')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-green-50 text-green-700 font-black text-xl border-2 border-green-200 active:bg-green-100">◎</button>
+                        <button onClick={() => addReceive(player.id, 'good')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-green-50 text-green-700 font-black text-xl border-2 border-green-200 active:bg-green-100">○</button>
+                        <button onClick={() => addReceive(player.id, 'follow')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-green-50 text-green-700 font-black text-xl border-2 border-green-200 active:bg-green-100">△</button>
+                        <button onClick={() => addReceive(player.id, 'miss')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-red-50 text-red-700 font-black text-xl border-2 border-red-200 active:bg-red-100">×</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
             <div className="p-3 border-r-2 border-gray-100">選手 / 成果</div>
             <div className="p-3 border-r-2 border-gray-100">サーブ記録</div>
             <div className="p-3">サーブレシーブ</div>
