@@ -81,12 +81,12 @@ const App: React.FC = () => {
 
   // 検索機能
   const filteredMatches = matches.filter(match => {
-    const query = searchQuery.toLowerCase();
-    return (
-      match.tournamentName.toLowerCase().includes(query) ||
-      match.opponent.toLowerCase().includes(query)
-    );
-  });
+  const query = searchQuery.toLowerCase();
+  return (
+    (match.tournamentName || '').toLowerCase().includes(query) ||
+    (match.opponent || '').toLowerCase().includes(query)
+  );
+});
 
   const activeMatch = matches.find(m => m.id === activeMatchId);
 
