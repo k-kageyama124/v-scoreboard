@@ -66,6 +66,7 @@ const App: React.FC = () => {
     })),
     bench: [],
     services: [],
+     receives: [],
     substitutions: []
   });
 
