@@ -34,7 +34,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
   };
 
   const toggleResult = () => {
-    onUpdate({ ...match, result: match.result === 'win' ? 'loss' : 'win' });
+    onUpdate({ ...match, result: match.result === 'win' ? 'lose' : 'win' });
   };
 
   const adjustScore = (team: 'my' | 'opponent', delta: number) => {
