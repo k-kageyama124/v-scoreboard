@@ -46,7 +46,7 @@ const MatchList: React.FC<MatchListProps> = ({ matches, onSelect, onDelete }) =>
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-2 text-indigo-600 font-bold">
               <Trophy size={18} />
-              <span>{match.tournament}</span>
+             <span>{match.tournamentName}</span>
             </div>
             <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
               match.result === 'win' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -69,7 +69,7 @@ const MatchList: React.FC<MatchListProps> = ({ matches, onSelect, onDelete }) =>
             
             <div className="text-right">
               <span className="text-2xl font-black text-gray-900">
-                {match.sets[0]?.myScore || 0} - {match.sets[0]?.opponentScore || 0}
+               {match.sets[0]?.ourScore || 0} - {match.sets[0]?.opponentScore || 0}
               </span>
             </div>
           </div>
