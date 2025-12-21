@@ -124,10 +124,10 @@ const App: React.FC = () => {
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-4">
         {activeMatchId && activeMatch ? (
-          <MatchDetail 
-            match={activeMatch} 
-            onUpdate={updateMatch} 
-            onDelete={() => deleteMatch(activeMatch.id)}
+        <MatchDetail 
+  match={activeMatch} 
+  onUpdate={updateMatch} 
+  onBack={() => setActiveMatchId(null)}
           />
         ) : (
           <>
