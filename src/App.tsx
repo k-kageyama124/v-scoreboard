@@ -12,63 +12,55 @@ const App: React.FC = () => {
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
+  // Firebaseからデータをリアルタイムで取得
   useEffect(() => {
     const matchesRef = ref(database, 'matches');
     
-    const unsubscribe = onValue(
-      matchesRef, 
-      (snapshot) => {
-        try {
-          const data = snapshot.val();
-          if (data) {
-            const matchesArray = Object.keys(data).map(key => {
-              const match = data[key];
-              // データ正規化：setsが存在しない場合は空配列を追加
-              if (!match.sets || !Array.isArray(match.sets) || match.sets.length === 0) {
-                match.sets = [createEmptySet()];
-              }
-              return {
-                ...match,
-                id: key
-              };
-            });
-            setMatches(matchesArray);
-          } else {
-            setMatches([]);
+    const unsubscribe = onValue(matchesRef, (snapshot) => {
+      const data = snapshot.val();
+      console.log('Firebase raw data:', data);
+      
+      if (data) {
+        const matchesArray = Object.keys(data).map(key => {
+          const match = data[key];
+          
+          // フィールド名の正規化（tournament → tournamentName）
+          const normalizedMatch = {
+            ...match,
+            id: key,
+            // tournament と tournamentName の両方に対応
+            tournamentName: match.tournamentName || match.tournament || '',
+          };
+          
+          // setsの正規化（オブジェクトを配列に変換）
+          if (!normalizedMatch.sets || !Array.isArray(normalizedMatch.sets)) {
+            // setsがオブジェクトの場合、配列に変換
+            if (normalizedMatch.sets && typeof normalizedMatch.sets === 'object') {
+              normalizedMatch.sets = Object.values(normalizedMatch.sets);
+            } else {
+              // setsが存在しない場合、デフォルト値
+              normalizedMatch.sets = [createEmptySet()];
+            }
           }
-          setError(null);
-        } catch (err) {
-          console.error('データ取得エラー:', err);
-          setError('データの取得に失敗しました');
-          setMatches([]);
-        } finally {
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error('Firebase接続エラー:', err);
-        setError('Firebaseへの接続に失敗しました');
+          
+          // 空配列の場合もデフォルト値を設定
+          if (normalizedMatch.sets.length === 0) {
+            normalizedMatch.sets = [createEmptySet()];
+          }
+          
+          return normalizedMatch;
+        });
+        
+        console.log('Normalized matches:', matchesArray);
+        setMatches(matchesArray);
+      } else {
         setMatches([]);
-        setLoading(false);
       }
-    );
+    });
 
     return () => unsubscribe();
   }, []);
-
-  const createEmptySet = (): MatchSet => ({
-    ourScore: 0,
-    opponentScore: 0,
-    serveTurn: 'our',
-    players: [],
-    serves: [],
-    receives: [],
-    substitutions: [],
-    currentRound: 1
-  });
 
   const handleAddMatch = (data: Partial<Match>) => {
     const newMatchId = crypto.randomUUID();
@@ -82,75 +74,51 @@ const App: React.FC = () => {
       ...data
     } as Match;
 
+    // Firebaseに保存
     const matchRef = ref(database, `matches/${newMatchId}`);
-    set(matchRef, newMatch)
-      .then(() => {
-        setShowForm(false);
-        setActiveMatchId(newMatchId);
-      })
-      .catch((err) => {
-        console.error('保存エラー:', err);
-        alert('データの保存に失敗しました');
-      });
+    set(matchRef, newMatch);
+
+    setShowForm(false);
+    setActiveMatchId(newMatchId);
   };
 
+  const createEmptySet = (): MatchSet => ({
+    ourScore: 0,
+    opponentScore: 0,
+    serveTurn: 'our',
+    players: [],
+    serves: [],
+    receives: [],
+    substitutions: [],
+    currentRound: 1
+  });
+
   const updateMatch = (updatedMatch: Match) => {
+    // Firebaseに保存（tournamentNameで統一）
     const matchRef = ref(database, `matches/${updatedMatch.id}`);
-    set(matchRef, updatedMatch)
-      .catch((err) => {
-        console.error('更新エラー:', err);
-        alert('データの更新に失敗しました');
-      });
+    set(matchRef, updatedMatch);
   };
 
   const deleteMatch = (id: string) => {
     if (window.confirm('この試合データを削除してもよろしいですか？')) {
+      // Firebaseから削除
       const matchRef = ref(database, `matches/${id}`);
-      remove(matchRef)
-        .then(() => {
-          setActiveMatchId(null);
-        })
-        .catch((err) => {
-          console.error('削除エラー:', err);
-          alert('データの削除に失敗しました');
-        });
+      remove(matchRef);
+      setActiveMatchId(null);
     }
   };
 
-  const filteredMatches = Array.isArray(matches) ? matches.filter(match => {
+  // 検索機能
+  const filteredMatches = (matches || []).filter(match => {
+    if (!match) return false;
     const query = searchQuery.toLowerCase();
     return (
       (match.tournamentName || '').toLowerCase().includes(query) ||
       (match.opponent || '').toLowerCase().includes(query)
     );
-  }) : [];
+  });
 
   const activeMatch = matches.find(m => m.id === activeMatchId);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">データを読み込み中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-          <h2 className="text-red-800 font-bold text-lg mb-2">エラーが発生しました</h2>
-          <p className="text-red-600 mb-4">{error}</p>
-          <p className="text-sm text-red-500">
-            Firebase Consoleでデータベースのルール設定を確認してください。
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
