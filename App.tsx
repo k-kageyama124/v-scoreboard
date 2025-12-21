@@ -1,96 +1,92 @@
-
 import React, { useState, useEffect } from 'react';
-import { Match, MatchSet, Player } from './types';
+import { Match, MatchSet } from './types';
 import MatchList from './components/MatchList';
 import MatchDetail from './components/MatchDetail';
 import MatchForm from './components/MatchForm';
-import { Plus, ChevronLeft, Download, Upload } from 'lucide-react';
+import { Plus, ChevronLeft, Search } from 'lucide-react';
+import { database } from './firebase';
+import { ref, onValue, set, remove } from 'firebase/database';
 
 const App: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
+  // Firebaseからデータをリアルタイムで取得
   useEffect(() => {
-    const saved = localStorage.getItem('vb_matches');
-    if (saved) {
-      try {
-        setMatches(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse saved matches", e);
+    const matchesRef = ref(database, 'matches');
+    
+    const unsubscribe = onValue(matchesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const matchesArray = Object.keys(data).map(key => ({
+          ...data[key],
+          id: key
+        }));
+        setMatches(matchesArray);
+      } else {
+        setMatches([]);
       }
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('vb_matches', JSON.stringify(matches));
-  }, [matches]);
-
   const handleAddMatch = (data: Partial<Match>) => {
+    const newMatchId = crypto.randomUUID();
     const newMatch: Match = {
-      id: crypto.randomUUID(),
+      id: newMatchId,
       date: data.date || new Date().toISOString().split('T')[0],
-      tournament: data.tournament || '',
+      tournamentName: data.tournamentName || '',
       opponent: data.opponent || '',
       result: 'win',
-      sets: [createEmptySet(1)],
+      sets: [createEmptySet()],
       ...data
     } as Match;
-    setMatches([newMatch, ...matches]);
+
+    // Firebaseに保存
+    const matchRef = ref(database, `matches/${newMatchId}`);
+    set(matchRef, newMatch);
+
     setShowForm(false);
-    setActiveMatchId(newMatch.id);
+    setActiveMatchId(newMatchId);
   };
 
-  const createEmptySet = (num: number): MatchSet => ({
-  ourScore: 0,
-  opponentScore: 0,
-  serveTurn: 'our',
-  players: [],
-  serves: [],
-  receives: [],
-  substitutions: [],
-  currentRound: 1
-});
+  const createEmptySet = (): MatchSet => ({
+    ourScore: 0,
+    opponentScore: 0,
+    serveTurn: 'our',
+    players: [],
+    serves: [],
+    receives: [],
+    substitutions: [],
+    currentRound: 1
+  });
 
   const updateMatch = (updatedMatch: Match) => {
-    setMatches(matches.map(m => m.id === updatedMatch.id ? updatedMatch : m));
+    // Firebaseに保存
+    const matchRef = ref(database, `matches/${updatedMatch.id}`);
+    set(matchRef, updatedMatch);
   };
 
   const deleteMatch = (id: string) => {
     if (window.confirm('この試合データを削除してもよろしいですか？')) {
-      setMatches(matches.filter(m => m.id !== id));
+      // Firebaseから削除
+      const matchRef = ref(database, `matches/${id}`);
+      remove(matchRef);
       setActiveMatchId(null);
     }
   };
 
-  // データをファイルとして保存
-  const exportAllData = () => {
-    const dataStr = JSON.stringify(matches);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `v_score_data_${new Date().toISOString().split('T')[0]}.json`;
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
-
-  // データをファイルから読み込み
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const imported = JSON.parse(e.target?.result as string);
-        if (Array.isArray(imported) && window.confirm('現在のデータにインポートしたデータを追加しますか？')) {
-          setMatches([...imported, ...matches]);
-        }
-      } catch (err) {
-        alert('ファイルの形式が正しくありません。');
-      }
-    };
-    reader.readAsText(file);
-  };
+  // 検索機能
+  const filteredMatches = matches.filter(match => {
+    const query = searchQuery.toLowerCase();
+    return (
+      match.tournamentName.toLowerCase().includes(query) ||
+      match.opponent.toLowerCase().includes(query)
+    );
+  });
 
   const activeMatch = matches.find(m => m.id === activeMatchId);
 
@@ -109,21 +105,12 @@ const App: React.FC = () => {
           
           <div className="flex items-center gap-2">
             {!activeMatchId && (
-              <>
-                <label className="p-2 bg-indigo-600 rounded-full cursor-pointer hover:bg-indigo-500 transition-colors">
-                  <Upload size={20} />
-                  <input type="file" className="hidden" accept=".json" onChange={importData} />
-                </label>
-                <button onClick={exportAllData} className="p-2 bg-indigo-600 rounded-full hover:bg-indigo-500 transition-colors">
-                  <Download size={20} />
-                </button>
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="bg-white text-indigo-700 px-4 py-2 rounded-full font-bold flex items-center gap-1 shadow-md active:scale-95 transition-all ml-2"
-                >
-                  <Plus size={20} /> 新規試合
-                </button>
-              </>
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-white text-indigo-700 px-4 py-2 rounded-full font-bold flex items-center gap-1 shadow-md active:scale-95 transition-all"
+              >
+                <Plus size={20} /> 新規試合
+              </button>
             )}
           </div>
         </div>
@@ -134,13 +121,30 @@ const App: React.FC = () => {
           <MatchDetail 
             match={activeMatch} 
             onUpdate={updateMatch} 
-            onDelete={() => deleteMatch(activeMatch.id)}
+            onBack={() => setActiveMatchId(null)}
           />
         ) : (
-          <MatchList 
-            matches={matches} 
-            onSelect={setActiveMatchId} 
-          />
+          <>
+            {matches.length > 0 && (
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="試合名または対戦相手で検索..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </div>
+            )}
+            <MatchList 
+              matches={filteredMatches} 
+              onSelect={setActiveMatchId}
+              onDelete={deleteMatch}
+            />
+          </>
         )}
       </main>
 
