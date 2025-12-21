@@ -1,64 +1,49 @@
-export type ServiceQuality = 'pinpoint' | 'setter_move' | 'other' | 'miss';
-
-export type PointType = 'none' | 'red_star' | 'black_star';
-
-// サーブレシーブの品質を追加
+export type ServeQuality = 'ace' | 'good' | 'normal' | 'miss';
 export type ReceiveQuality = 'perfect' | 'good' | 'follow' | 'miss';
 
-export interface ServiceRecord {
+export interface ServeRecord {
   id: string;
   playerId: string;
-  playerName: string;
-  round: 1 | 2;
-  quality: ServiceQuality;
-  pointType: PointType;
-  timestamp: number;
+  quality: ServeQuality;
+  round: number;
 }
 
-// サーブレシーブ記録を追加
 export interface ReceiveRecord {
   id: string;
   playerId: string;
-  playerName: string;
-  round: 1 | 2;
   quality: ReceiveQuality;
-  timestamp: number;
-}
-
-export interface Substitution {
-  id: string;
-  outPlayerId: string;
-  outPlayerName: string;
-  inPlayerId: string;
-  inPlayerName: string;
-  score: string;
-  timestamp: number;
+  round: number;
 }
 
 export interface Player {
   id: string;
   name: string;
-  isSubstituted: boolean;
+  position: 'starting' | 'bench';
+}
+
+export interface SubstitutionRecord {
+  id: string;
+  outPlayerName: string;
+  inPlayerName: string;
+  score: string;
 }
 
 export interface MatchSet {
-  id: string;
-  setNumber: number;
-  myScore: number;
+  ourScore: number;
   opponentScore: number;
-  serveTurn: 'S' | 'R';
-  lineup: Player[];
-  bench: Player[];
-  services: ServiceRecord[];
-  receives: ReceiveRecord[]; // サーブレシーブ記録を追加
-  substitutions: Substitution[];
+  serveTurn: 'our' | 'opponent';
+  players: Player[];
+  serves: ServeRecord[];
+  receives: ReceiveRecord[];
+  substitutions: SubstitutionRecord[];
+  currentRound: number;
 }
 
 export interface Match {
   id: string;
   date: string;
-  tournament: string;
+  tournamentName: string;
   opponent: string;
-  sets: MatchSet[];
   result: 'win' | 'lose';
+  sets: MatchSet[];
 }
