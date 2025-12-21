@@ -25,31 +25,47 @@ const App: React.FC = () => {
         const matchesArray = Object.keys(data).map(key => {
           const match = data[key];
           
-          // フィールド名の正規化（tournament → tournamentName）
-          const normalizedMatch = {
+          // マッチデータの正規化
+          const normalizedMatch: any = {
             ...match,
             id: key,
-            // tournament と tournamentName の両方に対応
+            // tournament → tournamentName
             tournamentName: match.tournamentName || match.tournament || '',
           };
           
-          // setsの正規化（オブジェクトを配列に変換）
-          if (!normalizedMatch.sets || !Array.isArray(normalizedMatch.sets)) {
-            // setsがオブジェクトの場合、配列に変換
-            if (normalizedMatch.sets && typeof normalizedMatch.sets === 'object') {
-              normalizedMatch.sets = Object.values(normalizedMatch.sets);
-            } else {
-              // setsが存在しない場合、デフォルト値
-              normalizedMatch.sets = [createEmptySet()];
-            }
+          // setsの正規化
+          let rawSets = match.sets;
+          
+          // オブジェクトを配列に変換
+          if (rawSets && !Array.isArray(rawSets)) {
+            rawSets = Object.values(rawSets);
           }
           
-          // 空配列の場合もデフォルト値を設定
-          if (normalizedMatch.sets.length === 0) {
+          // 各setのフィールド名を変換
+          if (Array.isArray(rawSets) && rawSets.length > 0) {
+            normalizedMatch.sets = rawSets.map((set: any) => ({
+              // myScore → ourScore
+              ourScore: set.ourScore ?? set.myScore ?? 0,
+              opponentScore: set.opponentScore ?? 0,
+              // serveTurn: "S" → "our", "R" → "opponent"
+              serveTurn: set.serveTurn === 'S' ? 'our' : 
+                        set.serveTurn === 'R' ? 'opponent' : 
+                        set.serveTurn || 'our',
+              // lineup → players
+              players: set.players || set.lineup || [],
+              // services → serves
+              serves: set.serves || set.services || [],
+              receives: set.receives || [],
+              substitutions: set.substitutions || [],
+              // setNumber → currentRound
+              currentRound: set.currentRound ?? set.setNumber ?? 1
+            }));
+          } else {
+            // setsが存在しないか空の場合
             normalizedMatch.sets = [createEmptySet()];
           }
           
-          return normalizedMatch;
+          return normalizedMatch as Match;
         });
         
         console.log('Normalized matches:', matchesArray);
@@ -94,7 +110,7 @@ const App: React.FC = () => {
   });
 
   const updateMatch = (updatedMatch: Match) => {
-    // Firebaseに保存（tournamentNameで統一）
+    // Firebaseに保存
     const matchRef = ref(database, `matches/${updatedMatch.id}`);
     set(matchRef, updatedMatch);
   };
