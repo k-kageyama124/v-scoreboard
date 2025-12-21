@@ -38,7 +38,7 @@ const App: React.FC = () => {
     const newMatch: Match = {
       id: newMatchId,
       date: data.date || new Date().toISOString().split('T')[0],
-      tournament: data.tournament || '',
+     tournamentName: data.tournamentName || '',
       opponent: data.opponent || '',
       result: 'win',
       sets: [createEmptySet(1)],
@@ -89,7 +89,7 @@ const App: React.FC = () => {
   const filteredMatches = matches.filter(match => {
     const query = searchQuery.toLowerCase();
     return (
-      match.tournament.toLowerCase().includes(query) ||
+     match.tournamentName.toLowerCase().includes(query) ||
       match.opponent.toLowerCase().includes(query)
     );
   });
