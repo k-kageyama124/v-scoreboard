@@ -1,35 +1,23 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Match, MatchSet, ServiceRecord, ReceiveRecord, ServiceQuality, ReceiveQuality, PointType, Substitution, Player } from '../types';
-import { Trash2, Star, UserPlus, Download, Edit3, PlusCircle, Plus, Minus, RotateCcw, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Match, MatchSet, Player, SubstitutionRecord, ServeQuality, ServeRecord, ReceiveQuality, ReceiveRecord } from '../types';
+import { ArrowLeft, RotateCw, X, Trash2, Undo } from 'lucide-react';
 
 interface MatchDetailProps {
   match: Match;
   onUpdate: (match: Match) => void;
-  onDelete: () => void;
+  onBack: () => void;
 }
 
-const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) => {
-  const [activeSetIndex, setActiveSetIndex] = useState(0);
-  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
-  const [playerRounds, setPlayerRounds] = useState<Record<string, 1 | 2>>({});
-  
-  const currentSet = match.sets[activeSetIndex];
-  const recordRef = useRef<HTMLDivElement>(null);
+const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) => {
+  const [currentSetIndex, setCurrentSetIndex] = useState(0);
+  const [benchPlayerName, setBenchPlayerName] = useState('');
+  const [inPlayerName, setInPlayerName] = useState('');
+  const [addingPlayer, setAddingPlayer] = useState<string | null>(null);
+  const currentSet = match.sets[currentSetIndex];
 
-  useEffect(() => {
-    if (!currentSet.bench || !currentSet.substitutions || !currentSet.services || !currentSet.receives) {
-      updateSet({
-        bench: currentSet.bench || [],
-        substitutions: currentSet.substitutions || [],
-        services: currentSet.services || [],
-        receives: currentSet.receives || []
-      });
-    }
-  }, [activeSetIndex]);
-
-  const updateSet = (data: Partial<MatchSet>) => {
+  const updateSet = (updates: Partial<MatchSet>) => {
     const newSets = [...match.sets];
-    newSets[activeSetIndex] = { ...currentSet, ...data };
+    newSets[currentSetIndex] = { ...currentSet, ...updates };
     onUpdate({ ...match, sets: newSets });
   };
 
@@ -37,128 +25,66 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     onUpdate({ ...match, result: match.result === 'win' ? 'lose' : 'win' });
   };
 
-  const adjustScore = (team: 'my' | 'opponent', delta: number) => {
-    if (team === 'my') {
-      updateSet({ myScore: Math.max(0, (currentSet.myScore || 0) + delta) });
-    } else {
-      updateSet({ opponentScore: Math.max(0, (currentSet.opponentScore || 0) + delta) });
-    }
+  const adjustScore = (team: 'our' | 'opponent', delta: number) => {
+    const newScore = team === 'our' 
+      ? Math.max(0, currentSet.ourScore + delta)
+      : Math.max(0, currentSet.opponentScore + delta);
+    
+    updateSet(team === 'our' ? { ourScore: newScore } : { opponentScore: newScore });
   };
 
   const toggleServeTurn = () => {
-    updateSet({ serveTurn: currentSet.serveTurn === 'S' ? 'R' : 'S' });
+    updateSet({ serveTurn: currentSet.serveTurn === 'our' ? 'opponent' : 'our' });
   };
 
-  const addBenchPlayer = () => {
-    const name = window.prompt('控え選手の名前を入力してください');
-    if (!name || name.trim() === '') return;
+  const addPlayer = (position: 'starting' | 'bench', playerName: string) => {
     const newPlayer: Player = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      isSubstituted: false
+      id: Date.now().toString(),
+      name: playerName,
+      position
     };
-    const currentBench = currentSet.bench ? [...currentSet.bench] : [];
-    updateSet({ bench: [...currentBench, newPlayer] });
-  };
-
-  const handlePlayerNameChange = (playerId: string, newName: string, isBench: boolean = false) => {
-    if (isBench) {
-      const newBench = (currentSet.bench || []).map(p => p.id === playerId ? { ...p, name: newName } : p);
-      updateSet({ bench: newBench });
-    } else {
-      const newLineup = currentSet.lineup.map(p => p.id === playerId ? { ...p, name: newName } : p);
-      updateSet({ lineup: newLineup });
-    }
-  };
-
-  const addService = (playerId: string, quality: ServiceQuality, pointType: PointType) => {
-    const player = currentSet.lineup.find(p => p.id === playerId);
-    if (!player) return;
-
-    const currentRound = playerRounds[playerId] || 1;
-    const newService: ServiceRecord = {
-      id: crypto.randomUUID(),
-      playerId,
-      playerName: player.name,
-      quality,
-      pointType,
-      round: currentRound,
-      timestamp: Date.now()
-    };
-
-    updateSet({
-      services: [...(currentSet.services || []), newService]
-    });
-  };
-
-  const addReceive = (playerId: string, quality: ReceiveQuality) => {
-    const player = currentSet.lineup.find(p => p.id === playerId);
-    if (!player) return;
-
-    const currentRound = playerRounds[playerId] || 1;
-    const newReceive: ReceiveRecord = {
-      id: crypto.randomUUID(),
-      playerId,
-      playerName: player.name,
-      quality,
-      round: currentRound,
-      timestamp: Date.now()
-    };
-
-    updateSet({
-      receives: [...(currentSet.receives || []), newReceive]
-    });
-  };
-
-  const handleSubstitution = (lineupPlayerId: string) => {
-    const outPlayer = currentSet.lineup.find(p => p.id === lineupPlayerId);
-    if (!outPlayer) return;
-
-    let inPlayer: Player | undefined;
-    const bench = currentSet.bench || [];
     
-    const currentScore = `${currentSet.myScore || 0}-${currentSet.opponentScore || 0}`;
+    const newPlayers = [...currentSet.players, newPlayer];
+    updateSet({ players: newPlayers });
+    
+    if (position === 'bench') {
+      setBenchPlayerName('');
+    }
+    setAddingPlayer(null);
+  };
 
-    if (bench.length > 0) {
-      const benchNames = bench.map((p, i) => `${i + 1}: ${p.name}`).join('\n');
-      const choice = window.prompt(`【選手交代】 スコア: ${currentScore}\n${outPlayer.name} 選手と交代する選手を選んでください。\n番号で選ぶか、新しい名前を入力してください:\n${benchNames}`);
-      
-      if (!choice) return;
-      
-      const index = parseInt(choice) - 1;
-      if (!isNaN(index) && bench[index]) {
-        inPlayer = bench[index];
-      } else {
-        inPlayer = { id: crypto.randomUUID(), name: choice, isSubstituted: true };
-      }
+  const handleSubstitution = () => {
+    if (!benchPlayerName.trim() || !inPlayerName.trim()) return;
+
+    const newPlayers = currentSet.players.map(p => 
+      p.name === inPlayerName ? { ...p, position: 'bench' as const } : p
+    );
+
+    const benchPlayer = currentSet.players.find(p => p.name === benchPlayerName);
+    if (benchPlayer) {
+      newPlayers.push({ ...benchPlayer, position: 'starting' as const });
     } else {
-      const newName = window.prompt(`${outPlayer.name} 選手と代わる選手名を入力してください\n現在のスコア: ${currentScore}`);
-      if (!newName) return;
-      inPlayer = { id: crypto.randomUUID(), name: newName, isSubstituted: true };
+      addPlayer('starting', benchPlayerName);
     }
 
-    const sub: Substitution = {
-      id: crypto.randomUUID(),
-      outPlayerId: outPlayer.id,
-      outPlayerName: outPlayer.name,
-      inPlayerId: inPlayer.id,
-      inPlayerName: inPlayer.name,
-      score: currentScore,
-      timestamp: Date.now()
+    const newSubstitution: SubstitutionRecord = {
+      id: Date.now().toString(),
+      outPlayerName: inPlayerName,
+      inPlayerName: benchPlayerName,
+      score: `${currentSet.ourScore}-${currentSet.opponentScore}`
     };
 
-    const newLineup = [...currentSet.lineup, { ...inPlayer, isSubstituted: true }];
-    const newBench = bench.filter(p => p.id !== inPlayer?.id);
-
     updateSet({
-      lineup: newLineup,
-      bench: newBench,
-      substitutions: [...(currentSet.substitutions || []), sub]
+      players: newPlayers,
+      substitutions: [...(currentSet.substitutions || []), newSubstitution]
     });
+
+    setBenchPlayerName('');
+    setInPlayerName('');
   };
 
   const removeSubstitution = (subId: string) => {
-    if (!window.confirm('この交代記録を削除しますか？\n※選手の配置は元に戻りません。記録のみ削除されます。')) {
+    if (!window.confirm('この交代記録を削除しますか?\n※選手の配置は元に戻りません。記録のみ削除されます。')) {
       return;
     }
     
@@ -166,524 +92,598 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onDelete }) 
     updateSet({ substitutions: newSubstitutions });
   };
 
-  const exportImage = async () => {
-    if (!recordRef.current) return;
-    try {
-      // @ts-ignore
-      const canvas = await window.html2canvas(recordRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-      const link = document.createElement('a');
-      link.download = `${match.date}_${match.opponent}_成果記録.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } catch (err) {
-      console.error(err);
-      alert('画像の書き出しに失敗しました。');
-    }
-  };
-
-  const getPlayerMarkers = (playerId: string) => {
-    const playerServices = (currentSet.services || []).filter(s => s.playerId === playerId);
-    const hasRound1 = playerServices.some(s => s.round === 1);
-    const hasRound2 = playerServices.some(s => s.round === 2);
+  const addServe = (playerId: string, quality: ServeQuality) => {
+    const newServeRecord: ServeRecord = {
+      id: Date.now().toString(),
+      playerId,
+      quality,
+      round: currentSet.currentRound || 1
+    };
     
-    const redStars = playerServices.filter(s => s.pointType === 'red_star').length;
-    const blackStars = playerServices.filter(s => s.pointType === 'black_star').length;
-    const misses = playerServices.filter(s => s.quality === 'miss').length;
+    updateSet({
+      serves: [...(currentSet.serves || []), newServeRecord]
+    });
+  };
+
+  const addReceive = (playerId: string, quality: ReceiveQuality) => {
+    const newReceiveRecord: ReceiveRecord = {
+      id: Date.now().toString(),
+      playerId,
+      quality,
+      round: currentSet.currentRound || 1
+    };
     
-    return { hasRound1, hasRound2, redStars, blackStars, misses };
+    updateSet({
+      receives: [...(currentSet.receives || []), newReceiveRecord]
+    });
   };
 
-  const toggleRound = (playerId: string) => {
-    setPlayerRounds(prev => ({
-      ...prev,
-      [playerId]: prev[playerId] === 2 ? 1 : 2
-    }));
+  const undoLastServe = (playerId: string) => {
+    const serves = currentSet.serves || [];
+    const playerServes = serves.filter(s => s.playerId === playerId);
+    
+    if (playerServes.length === 0) return;
+    
+    const lastServe = playerServes[playerServes.length - 1];
+    updateSet({
+      serves: serves.filter(s => s.id !== lastServe.id)
+    });
   };
 
-  const undoLastService = () => {
-    if (!currentSet.services || currentSet.services.length === 0) return;
-    if(confirm('最後のサーブ記録を取り消しますか？')) {
-      updateSet({ services: currentSet.services.slice(0, -1) });
-    }
+  const undoLastReceive = (playerId: string) => {
+    const receives = currentSet.receives || [];
+    const playerReceives = receives.filter(r => r.playerId === playerId);
+    
+    if (playerReceives.length === 0) return;
+    
+    const lastReceive = playerReceives[playerReceives.length - 1];
+    updateSet({
+      receives: receives.filter(r => r.id !== lastReceive.id)
+    });
   };
 
-  const undoLastReceive = () => {
-    if (!currentSet.receives || currentSet.receives.length === 0) return;
-    if(confirm('最後のサーブレシーブ記録を取り消しますか？')) {
-      updateSet({ receives: currentSet.receives.slice(0, -1) });
-    }
+  const advanceRound = () => {
+    updateSet({ currentRound: (currentSet.currentRound || 1) + 1 });
   };
+
+  const startingPlayers = currentSet.players.filter(p => p.position === 'starting');
+  const benchPlayers = currentSet.players.filter(p => p.position === 'bench');
+  const needsMorePlayers = startingPlayers.length < 6;
 
   return (
-    <div className="space-y-6 pb-28">
-      {/* 操作パネル */}
-      <div className="flex gap-2 no-print">
-        <button onClick={exportImage} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
-          <Download size={18} /> 成績を画像で保存
-        </button>
-        <button 
-          onClick={toggleResult}
-          className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${match.result === 'win' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-red-500 text-white hover:bg-red-600'}`}
-        >
-          {match.result === 'win' ? 'WIN' : 'LOSE'}
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
+      <div className="max-w-[1400px] mx-auto space-y-8">
+        {/* ヘッダー */}
+        <div className="flex items-center gap-6">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-6 py-3 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 font-bold text-gray-700 border-2 border-gray-100 hover:border-indigo-200 active:scale-95"
+          >
+            <ArrowLeft size={20} />
+            戻る
+          </button>
 
-      {/* スコア入力パネル */}
-      <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100 no-print">
-        <div className="flex items-center justify-between gap-6">
-          <div className="flex-1 text-center space-y-3">
-            <p className="text-xs font-black text-indigo-600 tracking-widest uppercase">My Team</p>
-            <div className="flex items-center justify-center gap-4">
-              <button onClick={() => adjustScore('my', -1)} className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors shadow-sm"><Minus size={20}/></button>
-              <span className="text-5xl font-black w-16 select-none tabular-nums">{currentSet.myScore || 0}</span>
-              <button onClick={() => adjustScore('my', 1)} className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-md"><Plus size={20}/></button>
+          <div className="flex-1 bg-white rounded-2xl shadow-xl p-6 border-2 border-gray-100">
+            <div className="flex flex-wrap items-center gap-4">
+              <h2 className="text-2xl font-black text-gray-800">{match.tournamentName}</h2>
+              <span className="text-lg text-gray-500">vs</span>
+              <h3 className="text-xl font-bold text-indigo-600">{match.opponent}</h3>
+              <span className="ml-auto text-sm text-gray-500 font-mono">{match.date}</span>
             </div>
           </div>
-          <div className="text-2xl font-black text-gray-200 italic">VS</div>
-          <div className="flex-1 text-center space-y-3">
-            <p className="text-xs font-black text-red-600 tracking-widest uppercase">Opponent</p>
-            <div className="flex items-center justify-center gap-4">
-              <button onClick={() => adjustScore('opponent', -1)} className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors shadow-sm"><Minus size={20}/></button>
-              <span className="text-5xl font-black w-16 select-none tabular-nums">{currentSet.opponentScore || 0}</span>
-              <button onClick={() => adjustScore('opponent', 1)} className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center hover:bg-red-700 transition-colors shadow-md"><Plus size={20}/></button>
-            </div>
-          </div>
-        </div>
-      </div>
-  {/* 記録・出力エリア */}
-      <div ref={recordRef} className="bg-white p-8 rounded-3xl shadow-xl space-y-8 border border-gray-100">
-        <div className="border-b-2 border-gray-100 pb-6 flex justify-between items-end">
-          <div>
-            <div className="text-xs font-black text-indigo-500 uppercase tracking-[0.3em] mb-1">{match.tournament}</div>
-            <h2 className="text-3xl font-black text-gray-900 leading-none">{match.opponent} <span className="text-lg font-bold text-gray-300">戦</span></h2>
-            <div className="text-gray-400 text-sm font-bold mt-2">{match.date}</div>
-          </div>
-          <div className="flex items-center gap-6 bg-gray-50 px-6 py-4 rounded-2xl border border-gray-100 shadow-inner">
-             <div className="text-center">
-               <span className="text-[10px] block text-gray-400 font-black uppercase tracking-widest mb-1">SCORE</span>
-               <span className="text-4xl font-black text-gray-800 tabular-nums">{currentSet.myScore || 0} - {currentSet.opponentScore || 0}</span>
-             </div>
-             <div className="h-12 w-px bg-gray-200"></div>
-             <div className="text-center">
-               <span className="text-[10px] block text-gray-400 font-black mb-1">SERVE</span>
-               <button 
-                 onClick={toggleServeTurn}
-                 className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-lg font-black hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer no-print flex items-center gap-1"
-               >
-                 {currentSet.serveTurn}
-                 <RefreshCw size={14} className="opacity-50" />
-               </button>
-               <div className="print-only px-3 py-1 bg-indigo-600 text-white rounded-lg text-lg font-black hidden">
-                 {currentSet.serveTurn}
-               </div>
-             </div>
-          </div>
+
+          <button
+            onClick={toggleResult}
+            className={`px-8 py-4 rounded-2xl shadow-lg font-black text-lg transition-all duration-300 border-4 active:scale-95 no-print ${
+              match.result === 'win'
+                ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white border-green-600 hover:from-green-500 hover:to-emerald-600'
+                : 'bg-gradient-to-r from-red-400 to-rose-500 text-white border-red-600 hover:from-red-500 hover:to-rose-600'
+            }`}
+          >
+            {match.result === 'win' ? 'WIN' : 'LOSE'}
+          </button>
         </div>
 
-    {/* 成績テーブル */}
-        <div className="border-2 border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-          {/* PC版ヘッダー */}
-          <div className="hidden md:grid grid-cols-[180px_1fr_1fr] bg-gray-50 border-b-2 border-gray-100 text-[11px] font-black text-gray-400 uppercase tracking-widest">
-            <div className="p-3 border-r-2 border-gray-100">選手 / 成果</div>
-            <div className="p-3 border-r-2 border-gray-100">サーブ記録</div>
-            <div className="p-3">サーブレシーブ</div>
-          </div>
-          <div className="divide-y-2 divide-gray-100">
-            {currentSet.lineup.map((player) => {
-              const markers = getPlayerMarkers(player.id);
-              const services = (currentSet.services || []).filter(s => s.playerId === player.id);
-              const receives = (currentSet.receives || []).filter(r => r.playerId === player.id);
-              const isEditing = editingPlayerId === player.id;
-              const currentRound = playerRounds[player.id] || 1;
-              
-              return (
-                <div key={player.id}>
-                  {/* PC版: 3列レイアウト */}
-                  <div className="hidden md:grid grid-cols-[180px_1fr_1fr] min-h-[120px]">
-                    <div className="p-4 border-r-2 border-gray-100 bg-white relative flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center gap-1 group mb-2">
-                          {isEditing ? (
-                            <input autoFocus className="font-bold border-b-2 border-indigo-500 outline-none w-full py-1 text-lg" value={player.name} onChange={(e) => handlePlayerNameChange(player.id, e.target.value)} onBlur={() => setEditingPlayerId(null)} />
-                          ) : (
-                            <span className="font-black text-gray-800 cursor-pointer hover:text-indigo-600 flex items-center gap-2 text-lg" onClick={() => setEditingPlayerId(player.id)}>
-                              {player.name} <Edit3 size={12} className="text-gray-300 no-print" />
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-2 items-center">
-                          <div className="flex items-center text-green-600 font-black text-lg min-w-[30px]">
-                            {markers.hasRound2 ? '✓✓' : markers.hasRound1 ? '✓' : ''}
-                          </div>
-                          <div className="flex gap-1">
-                            {Array.from({ length: markers.redStars }).map((_, i) => <span key={i} className="text-red-500 text-xl leading-none">★</span>)}
-                            {Array.from({ length: markers.blackStars }).map((_, i) => <span key={i} className="text-gray-900 text-xl leading-none">★</span>)}
-                            {Array.from({ length: markers.misses }).map((_, i) => <span key={i} className="text-gray-300 font-black text-xl leading-none">―</span>)}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between no-print mt-4">
-                        <button 
-                          onClick={() => toggleRound(player.id)}
-                          className={`text-[10px] font-black px-3 py-1 rounded-full transition-all shadow-sm ${currentRound === 2 ? 'bg-indigo-600 text-white scale-105' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
-                        >
-                          {currentRound}巡目
-                        </button>
-                        <button onClick={() => handleSubstitution(player.id)} className="text-gray-300 hover:text-indigo-600 p-1">
-                          <UserPlus size={18} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* PC版: サーブ記録列 */}
-                    <div className="p-4 bg-white flex flex-col gap-4 border-r-2 border-gray-100">
-                      <div className="flex flex-wrap gap-2 min-h-[44px]">
-                        {services.map(s => (
-                          <div key={s.id} className="w-11 h-11 flex flex-col items-center justify-center border-2 border-gray-100 rounded-xl bg-gray-50 text-base font-black shadow-sm">
-                            <span className="leading-none">{s.quality === 'pinpoint' ? '◎' : s.quality === 'setter_move' ? '○' : s.quality === 'other' ? '△' : '×'}</span>
-                            {s.pointType !== 'none' && <span className={`${s.pointType === 'red_star' ? 'text-red-500' : 'text-gray-900'} text-[9px] mt-0.5 leading-none`}>★</span>}
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 no-print mt-auto">
-                        <button onClick={() => addService(player.id, 'pinpoint', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">◎</button>
-                        <button onClick={() => addService(player.id, 'setter_move', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">○</button>
-                        <button onClick={() => addService(player.id, 'other', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">△</button>
-                        <button onClick={() => addService(player.id, 'miss', 'none')} className="w-11 h-11 rounded-xl bg-red-50 text-red-700 font-black border-2 border-red-100 hover:bg-red-100 active:scale-90 transition-all shadow-sm">×</button>
-                        <div className="w-px h-11 bg-gray-200 mx-1"></div>
-                        <button onClick={() => addService(player.id, 'pinpoint', 'red_star')} className="px-4 h-11 rounded-xl bg-red-600 text-white text-[11px] font-black shadow-md hover:bg-red-700 active:scale-90 transition-all">赤★</button>
-                        <button onClick={() => addService(player.id, 'pinpoint', 'black_star')} className="px-4 h-11 rounded-xl bg-gray-800 text-white text-[11px] font-black shadow-md hover:bg-black active:scale-90 transition-all">黒★</button>
-                      </div>
-                    </div>
-
-                    {/* PC版: サーブレシーブ列 */}
-                    <div className="p-4 bg-white flex flex-col gap-4">
-                      <div className="flex flex-wrap gap-2 min-h-[44px]">
-                        {receives.map(r => (
-                          <div key={r.id} className="w-11 h-11 flex items-center justify-center border-2 border-gray-100 rounded-xl bg-gray-50 text-base font-black shadow-sm">
-                            <span className="leading-none">
-                              {r.quality === 'perfect' ? '◎' : r.quality === 'good' ? '○' : r.quality === 'follow' ? '△' : '×'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 no-print mt-auto">
-                        <button onClick={() => addReceive(player.id, 'perfect')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">◎</button>
-                        <button onClick={() => addReceive(player.id, 'good')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">○</button>
-                        <button onClick={() => addReceive(player.id, 'follow')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">△</button>
-                        <button onClick={() => addReceive(player.id, 'miss')} className="w-11 h-11 rounded-xl bg-red-50 text-red-700 font-black border-2 border-red-100 hover:bg-red-100 active:scale-90 transition-all shadow-sm">×</button>
-                      </div>
-                    </div>
-                  </div>
-                       {/* スマホ版: 縦積みレイアウト */}
-                  <div className="md:hidden bg-white">
-                    {/* 選手情報ヘッダー */}
-                    <div className="p-4 bg-gray-50 border-b-2 border-gray-100">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          {isEditing ? (
-                            <input autoFocus className="font-bold border-b-2 border-indigo-500 outline-none py-1 text-xl w-32" value={player.name} onChange={(e) => handlePlayerNameChange(player.id, e.target.value)} onBlur={() => setEditingPlayerId(null)} />
-                          ) : (
-                            <span className="font-black text-gray-800 cursor-pointer text-xl" onClick={() => setEditingPlayerId(player.id)}>
-                              {player.name}
-                            </span>
-                          )}
-                          <Edit3 size={14} className="text-gray-300 no-print" onClick={() => setEditingPlayerId(player.id)} />
-                        </div>
-                        <button onClick={() => handleSubstitution(player.id)} className="text-gray-400 hover:text-indigo-600 p-2 no-print">
-                          <UserPlus size={20} />
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center gap-3">
-                        <div className="text-green-600 font-black text-lg">
-                          {markers.hasRound2 ? '✓✓' : markers.hasRound1 ? '✓' : ''}
-                        </div>
-                        <div className="flex gap-1">
-                          {Array.from({ length: markers.redStars }).map((_, i) => <span key={i} className="text-red-500 text-xl">★</span>)}
-                          {Array.from({ length: markers.blackStars }).map((_, i) => <span key={i} className="text-gray-900 text-xl">★</span>)}
-                          {Array.from({ length: markers.misses }).map((_, i) => <span key={i} className="text-gray-300 font-black text-xl">―</span>)}
-                        </div>
-                        <button 
-                          onClick={() => toggleRound(player.id)}
-                          className={`ml-auto text-xs font-black px-3 py-1.5 rounded-full no-print ${currentRound === 2 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}
-                        >
-                          {currentRound}巡目
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* サーブ記録セクション */}
-                    <div className="p-4 border-b-2 border-gray-100">
-                      <h4 className="text-xs font-black text-indigo-600 uppercase tracking-wider mb-3">サーブ記録</h4>
-                      
-                      {/* 記録表示 */}
-                      <div className="flex flex-wrap gap-2 mb-3 min-h-[56px]">
-                        {services.map(s => (
-                          <div key={s.id} className="w-14 h-14 flex flex-col items-center justify-center border-2 border-gray-200 rounded-xl bg-gray-50 text-lg font-black shadow-sm">
-                            <span className="leading-none">{s.quality === 'pinpoint' ? '◎' : s.quality === 'setter_move' ? '○' : s.quality === 'other' ? '△' : '×'}</span>
-                            {s.pointType !== 'none' && <span className={`${s.pointType === 'red_star' ? 'text-red-500' : 'text-gray-900'} text-xs mt-1`}>★</span>}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* 入力ボタン */}
-                      <div className="flex flex-wrap gap-2 no-print">
-                        <button onClick={() => addService(player.id, 'pinpoint', 'none')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-indigo-50 text-indigo-700 font-black text-xl border-2 border-indigo-200 active:bg-indigo-100">◎</button>
-                        <button onClick={() => addService(player.id, 'setter_move', 'none')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-indigo-50 text-indigo-700 font-black text-xl border-2 border-indigo-200 active:bg-indigo-100">○</button>
-                        <button onClick={() => addService(player.id, 'other', 'none')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-indigo-50 text-indigo-700 font-black text-xl border-2 border-indigo-200 active:bg-indigo-100">△</button>
-                        <button onClick={() => addService(player.id, 'miss', 'none')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-red-50 text-red-700 font-black text-xl border-2 border-red-200 active:bg-red-100">×</button>
-                      </div>
-                      <div className="flex gap-2 mt-2 no-print">
-                        <button onClick={() => addService(player.id, 'pinpoint', 'red_star')} className="flex-1 h-12 rounded-xl bg-red-600 text-white text-sm font-black shadow-md active:bg-red-700">赤★</button>
-                        <button onClick={() => addService(player.id, 'pinpoint', 'black_star')} className="flex-1 h-12 rounded-xl bg-gray-800 text-white text-sm font-black shadow-md active:bg-black">黒★</button>
-                      </div>
-                    </div>
-
-                    {/* サーブレシーブセクション */}
-                    <div className="p-4">
-                      <h4 className="text-xs font-black text-green-600 uppercase tracking-wider mb-3">サーブレシーブ</h4>
-                      
-                      {/* 記録表示 */}
-                      <div className="flex flex-wrap gap-2 mb-3 min-h-[56px]">
-                        {receives.map(r => (
-                          <div key={r.id} className="w-14 h-14 flex items-center justify-center border-2 border-gray-200 rounded-xl bg-gray-50 text-lg font-black shadow-sm">
-                            <span className="leading-none">
-                              {r.quality === 'perfect' ? '◎' : r.quality === 'good' ? '○' : r.quality === 'follow' ? '△' : '×'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* 入力ボタン */}
-                      <div className="flex flex-wrap gap-2 no-print">
-                        <button onClick={() => addReceive(player.id, 'perfect')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-green-50 text-green-700 font-black text-xl border-2 border-green-200 active:bg-green-100">◎</button>
-                        <button onClick={() => addReceive(player.id, 'good')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-green-50 text-green-700 font-black text-xl border-2 border-green-200 active:bg-green-100">○</button>
-                        <button onClick={() => addReceive(player.id, 'follow')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-green-50 text-green-700 font-black text-xl border-2 border-green-200 active:bg-green-100">△</button>
-                        <button onClick={() => addReceive(player.id, 'miss')} className="flex-1 min-w-[60px] h-14 rounded-xl bg-red-50 text-red-700 font-black text-xl border-2 border-red-200 active:bg-red-100">×</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-            <div className="p-3 border-r-2 border-gray-100">選手 / 成果</div>
-            <div className="p-3 border-r-2 border-gray-100">サーブ記録</div>
-            <div className="p-3">サーブレシーブ</div>
-          </div>
-          <div className="divide-y-2 divide-gray-100">
-            {currentSet.lineup.map((player) => {
-              const markers = getPlayerMarkers(player.id);
-              const services = (currentSet.services || []).filter(s => s.playerId === player.id);
-              const receives = (currentSet.receives || []).filter(r => r.playerId === player.id);
-              const isEditing = editingPlayerId === player.id;
-              const currentRound = playerRounds[player.id] || 1;
-              
-              return (
-                <div key={player.id} className="grid grid-cols-[180px_1fr_1fr] min-h-[120px]">
-                  <div className="p-4 border-r-2 border-gray-100 bg-white relative flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-1 group mb-2">
-                        {isEditing ? (
-                          <input autoFocus className="font-bold border-b-2 border-indigo-500 outline-none w-full py-1 text-lg" value={player.name} onChange={(e) => handlePlayerNameChange(player.id, e.target.value)} onBlur={() => setEditingPlayerId(null)} />
-                        ) : (
-                          <span className="font-black text-gray-800 cursor-pointer hover:text-indigo-600 flex items-center gap-2 text-lg" onClick={() => setEditingPlayerId(player.id)}>
-                            {player.name} <Edit3 size={12} className="text-gray-300 no-print" />
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 items-center">
-                        <div className="flex items-center text-green-600 font-black text-lg min-w-[30px]">
-                          {markers.hasRound2 ? '✓✓' : markers.hasRound1 ? '✓' : ''}
-                        </div>
-                        <div className="flex gap-1">
-                          {Array.from({ length: markers.redStars }).map((_, i) => <span key={i} className="text-red-500 text-xl leading-none">★</span>)}
-                          {Array.from({ length: markers.blackStars }).map((_, i) => <span key={i} className="text-gray-900 text-xl leading-none">★</span>)}
-                          {Array.from({ length: markers.misses }).map((_, i) => <span key={i} className="text-gray-300 font-black text-xl leading-none">―</span>)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between no-print mt-4">
-                      <button 
-                        onClick={() => toggleRound(player.id)}
-                        className={`text-[10px] font-black px-3 py-1 rounded-full transition-all shadow-sm ${currentRound === 2 ? 'bg-indigo-600 text-white scale-105' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
-                      >
-                        {currentRound}巡目
-                      </button>
-                      <button onClick={() => handleSubstitution(player.id)} className="text-gray-300 hover:text-indigo-600 p-1">
-                        <UserPlus size={18} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* サーブ記録列 */}
-                  <div className="p-4 bg-white flex flex-col gap-4 border-r-2 border-gray-100">
-                    <div className="flex flex-wrap gap-2 min-h-[44px]">
-                      {services.map(s => (
-                        <div key={s.id} className="w-11 h-11 flex flex-col items-center justify-center border-2 border-gray-100 rounded-xl bg-gray-50 text-base font-black shadow-sm">
-                          <span className="leading-none">{s.quality === 'pinpoint' ? '◎' : s.quality === 'setter_move' ? '○' : s.quality === 'other' ? '△' : '×'}</span>
-                          {s.pointType !== 'none' && <span className={`${s.pointType === 'red_star' ? 'text-red-500' : 'text-gray-900'} text-[9px] mt-0.5 leading-none`}>★</span>}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 no-print mt-auto">
-                      <button onClick={() => addService(player.id, 'pinpoint', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">◎</button>
-                      <button onClick={() => addService(player.id, 'setter_move', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">○</button>
-                      <button onClick={() => addService(player.id, 'other', 'none')} className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 font-black border-2 border-indigo-100 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">△</button>
-                      <button onClick={() => addService(player.id, 'miss', 'none')} className="w-11 h-11 rounded-xl bg-red-50 text-red-700 font-black border-2 border-red-100 hover:bg-red-100 active:scale-90 transition-all shadow-sm">×</button>
-                      <div className="w-px h-11 bg-gray-200 mx-1"></div>
-                      <button onClick={() => addService(player.id, 'pinpoint', 'red_star')} className="px-4 h-11 rounded-xl bg-red-600 text-white text-[11px] font-black shadow-md hover:bg-red-700 active:scale-90 transition-all">赤★</button>
-                      <button onClick={() => addService(player.id, 'pinpoint', 'black_star')} className="px-4 h-11 rounded-xl bg-gray-800 text-white text-[11px] font-black shadow-md hover:bg-black active:scale-90 transition-all">黒★</button>
-                    </div>
-                  </div>
-
-                  {/* サーブレシーブ列 */}
-                  <div className="p-4 bg-white flex flex-col gap-4">
-                    <div className="flex flex-wrap gap-2 min-h-[44px]">
-                      {receives.map(r => (
-                        <div key={r.id} className="w-11 h-11 flex items-center justify-center border-2 border-gray-100 rounded-xl bg-gray-50 text-base font-black shadow-sm">
-                          <span className="leading-none">
-                            {r.quality === 'perfect' ? '◎' : r.quality === 'good' ? '○' : r.quality === 'follow' ? '△' : '×'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 no-print mt-auto">
-                      <button onClick={() => addReceive(player.id, 'perfect')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">◎</button>
-                      <button onClick={() => addReceive(player.id, 'good')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">○</button>
-                      <button onClick={() => addReceive(player.id, 'follow')} className="w-11 h-11 rounded-xl bg-green-50 text-green-700 font-black border-2 border-green-100 hover:bg-green-100 active:scale-90 transition-all shadow-sm">△</button>
-                      <button onClick={() => addReceive(player.id, 'miss')} className="w-11 h-11 rounded-xl bg-red-50 text-red-700 font-black border-2 border-red-100 hover:bg-red-100 active:scale-90 transition-all shadow-sm">×</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-         {/* 控え・交代履歴 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 shadow-inner">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">ベンチ / 控え選手</h4>
-              <button onClick={addBenchPlayer} className="text-indigo-600 no-print flex items-center gap-1 text-[11px] font-black hover:text-indigo-800 transition-colors">
-                <PlusCircle size={18} /> 追加
+        {/* セット切り替え */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-gray-100">
+          <div className="flex gap-4">
+            {match.sets.map((set, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSetIndex(index)}
+                className={`px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
+                  currentSetIndex === index
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                第{index + 1}セット
               </button>
+            ))}
+          </div>
+        </div>
+
+        {/* スコア表示 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-4 border-blue-200">
+            <div className="text-sm text-gray-500 font-bold mb-2">自チーム</div>
+            <div className="text-6xl font-black text-blue-600 font-mono mb-4">{currentSet.ourScore}</div>
+            <div className="flex gap-3 justify-center no-print">
+              <button onClick={() => adjustScore('our', 1)} className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 active:scale-95 transition-all">+1</button>
+              <button onClick={() => adjustScore('our', -1)} className="px-6 py-3 bg-gray-400 text-white rounded-xl font-bold hover:bg-gray-500 active:scale-95 transition-all">-1</button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {(currentSet.bench || []).map(p => {
-                const benchMarkers = getPlayerMarkers(p.id);
-                return (
-                  <span key={p.id} className="bg-white px-4 py-2 rounded-xl text-xs font-black border-2 border-gray-100 flex items-center gap-2 shadow-sm group">
-                    {p.name}
-                    {(benchMarkers.redStars > 0 || benchMarkers.blackStars > 0 || benchMarkers.hasRound1) && (
-                      <span className="text-[10px] text-gray-400">
-                        ({benchMarkers.hasRound2 ? '✓✓' : benchMarkers.hasRound1 ? '✓' : ''} 
-                        {benchMarkers.redStars > 0 && `★${benchMarkers.redStars}`})
+          </div>
+
+          <div className="flex items-center justify-center">
+            <button
+              onClick={toggleServeTurn}
+              className="px-8 py-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-2xl shadow-lg font-black text-xl border-4 border-amber-600 hover:from-amber-500 hover:to-orange-600 active:scale-95 transition-all no-print"
+            >
+              サーブ権: {currentSet.serveTurn === 'our' ? '自チーム (S)' : '相手 (R)'}
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-4 border-red-200">
+            <div className="text-sm text-gray-500 font-bold mb-2">相手チーム</div>
+            <div className="text-6xl font-black text-red-600 font-mono mb-4">{currentSet.opponentScore}</div>
+            <div className="flex gap-3 justify-center no-print">
+              <button onClick={() => adjustScore('opponent', 1)} className="px-6 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 active:scale-95 transition-all">+1</button>
+              <button onClick={() => adjustScore('opponent', -1)} className="px-6 py-3 bg-gray-400 text-white rounded-xl font-bold hover:bg-gray-500 active:scale-95 transition-all">-1</button>
+            </div>
+          </div>
+        </div>
+           {/* ラウンド管理 */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-lg font-bold text-gray-700">現在のラウンド:</span>
+              <span className="text-4xl font-black text-indigo-600 font-mono">{currentSet.currentRound || 1}</span>
+            </div>
+            <button
+              onClick={advanceRound}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-95 transition-all no-print"
+            >
+              <RotateCw size={20} className="inline mr-2" />
+              次のラウンドへ
+            </button>
+          </div>
+        </div>
+
+        {/* 選手追加 */}
+        {needsMorePlayers && (
+          <div className="bg-amber-50 border-4 border-amber-200 rounded-2xl p-6 shadow-xl">
+            <p className="text-amber-800 font-bold text-lg mb-4">⚠️ スターティングメンバーが6人未満です。選手を追加してください。</p>
+            <div className="grid grid-cols-1 sm:grid-cols-6 gap-3 no-print">
+              {Array.from({ length: 6 - startingPlayers.length }).map((_, i) => (
+                <div key={i}>
+                  {addingPlayer === `starting-${i}` ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="選手名"
+                        className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-indigo-500 focus:outline-none font-bold"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                            addPlayer('starting', e.currentTarget.value.trim());
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => setAddingPlayer(null)}
+                        className="px-3 py-3 bg-gray-300 rounded-xl hover:bg-gray-400 active:scale-95 transition-all"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setAddingPlayer(`starting-${i}`)}
+                      className="w-full px-4 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-600 active:scale-95 transition-all"
+                    >
+                      + 選手追加
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 成績テーブル - PC版 (3列) */}
+        <div className="hidden md:grid md:grid-cols-3 gap-6">
+          {/* 列1: 選手名 */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-gray-100">
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6">
+              <h3 className="text-xl font-black text-center">選手名</h3>
+            </div>
+            <div className="divide-y-2 divide-gray-100">
+              {startingPlayers.map((player, index) => (
+                <div key={player.id} className="p-6 hover:bg-indigo-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-black text-xl shadow-lg">
+                      {index + 1}
+                    </div>
+                    <span className="text-xl font-bold text-gray-800 flex-1">{player.name}</span>
+                    {currentSet.serveTurn === 'our' && index === 0 && (
+                      <span className="px-4 py-2 bg-amber-100 text-amber-700 rounded-full font-black text-sm border-2 border-amber-300">
+                        S
                       </span>
                     )}
-                    <Edit3 size={12} className="text-gray-300 opacity-0 group-hover:opacity-100 cursor-pointer no-print" onClick={() => {
-                      const n = window.prompt('選手名を変更', p.name);
-                      if(n && n.trim() !== '') handlePlayerNameChange(p.id, n.trim(), true);
-                    }} />
-                  </span>
-                );
-              })}
-              {(currentSet.bench || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">控え選手はいません</p>}
+                    {currentSet.serveTurn === 'opponent' && index === 0 && (
+                      <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-black text-sm border-2 border-blue-300">
+                        R
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-100 shadow-inner">
-            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">交代履歴</h4>
-            <div className="space-y-2">
-              {(currentSet.substitutions || []).map(sub => (
-                <div key={sub.id} className="text-xs flex items-center justify-between border-b-2 border-white pb-2 font-bold group">
-                  <span className="flex items-center gap-2">
-                    <span className="text-red-500 bg-red-50 px-2 py-1 rounded-lg">{sub.outPlayerName}</span>
-                    <span className="text-gray-300">▶</span>
-                    <span className="text-green-600 bg-green-50 px-2 py-1 rounded-lg">{sub.inPlayerName}</span>
-                  </span>
-                  <div className="flex items-center gap-3">
+
+          {/* 列2: サーブ */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-gray-100 border-r-4 border-r-indigo-300">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6">
+              <h3 className="text-xl font-black text-center">サーブ</h3>
+            </div>
+            <div className="divide-y-2 divide-gray-100">
+              {startingPlayers.map((player) => {
+                const serves = (currentSet.serves || []).filter(s => s.playerId === player.id);
+                return (
+                  <div key={player.id} className="p-6 hover:bg-green-50 transition-colors">
+                    <div className="flex flex-wrap gap-2 mb-3 min-h-[48px]">
+                      {serves.map((serve) => (
+                        <span
+                          key={serve.id}
+                          className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg shadow-md border-2 ${
+                            serve.quality === 'ace' ? 'bg-yellow-400 text-yellow-900 border-yellow-600' :
+                            serve.quality === 'good' ? 'bg-green-400 text-green-900 border-green-600' :
+                            serve.quality === 'normal' ? 'bg-blue-400 text-blue-900 border-blue-600' :
+                            'bg-red-400 text-red-900 border-red-600'
+                          }`}
+                          title={`Round ${serve.round}`}
+                        >
+                          {serve.quality === 'ace' ? '★' : serve.quality === 'good' ? '◎' : serve.quality === 'normal' ? '○' : '×'}
+                          <span className="absolute text-[10px] font-mono -mt-8">{serve.round}</span>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 no-print">
+                      <button onClick={() => addServe(player.id, 'ace')} className="flex-1 px-3 py-2 bg-yellow-400 text-yellow-900 rounded-lg font-bold hover:bg-yellow-500 active:scale-95 transition-all text-sm">★</button>
+                      <button onClick={() => addServe(player.id, 'good')} className="flex-1 px-3 py-2 bg-green-400 text-green-900 rounded-lg font-bold hover:bg-green-500 active:scale-95 transition-all text-sm">◎</button>
+                      <button onClick={() => addServe(player.id, 'normal')} className="flex-1 px-3 py-2 bg-blue-400 text-blue-900 rounded-lg font-bold hover:bg-blue-500 active:scale-95 transition-all text-sm">○</button>
+                      <button onClick={() => addServe(player.id, 'miss')} className="flex-1 px-3 py-2 bg-red-400 text-red-900 rounded-lg font-bold hover:bg-red-500 active:scale-95 transition-all text-sm">×</button>
+                      <button onClick={() => undoLastServe(player.id)} className="px-3 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 active:scale-95 transition-all" title="直前のサーブを取消">
+                        <Undo size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 列3: サーブレシーブ */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-gray-100">
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-6">
+              <h3 className="text-xl font-black text-center">サーブレシーブ</h3>
+            </div>
+            <div className="divide-y-2 divide-gray-100">
+              {startingPlayers.map((player) => {
+                const receives = (currentSet.receives || []).filter(r => r.playerId === player.id);
+                return (
+                  <div key={player.id} className="p-6 hover:bg-blue-50 transition-colors">
+                    <div className="flex flex-wrap gap-2 mb-3 min-h-[48px]">
+                      {receives.map((receive) => (
+                        <span
+                          key={receive.id}
+                          className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg shadow-md border-2 ${
+                            receive.quality === 'perfect' ? 'bg-yellow-400 text-yellow-900 border-yellow-600' :
+                            receive.quality === 'good' ? 'bg-green-400 text-green-900 border-green-600' :
+                            receive.quality === 'follow' ? 'bg-blue-400 text-blue-900 border-blue-600' :
+                            'bg-red-400 text-red-900 border-red-600'
+                          }`}
+                          title={`Round ${receive.round}`}
+                        >
+                          {receive.quality === 'perfect' ? '◎' : receive.quality === 'good' ? '○' : receive.quality === 'follow' ? '△' : '×'}
+                          <span className="absolute text-[10px] font-mono -mt-8">{receive.round}</span>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 no-print">
+                      <button onClick={() => addReceive(player.id, 'perfect')} className="flex-1 px-3 py-2 bg-yellow-400 text-yellow-900 rounded-lg font-bold hover:bg-yellow-500 active:scale-95 transition-all text-sm">◎</button>
+                      <button onClick={() => addReceive(player.id, 'good')} className="flex-1 px-3 py-2 bg-green-400 text-green-900 rounded-lg font-bold hover:bg-green-500 active:scale-95 transition-all text-sm">○</button>
+                      <button onClick={() => addReceive(player.id, 'follow')} className="flex-1 px-3 py-2 bg-blue-400 text-blue-900 rounded-lg font-bold hover:bg-blue-500 active:scale-95 transition-all text-sm">△</button>
+                      <button onClick={() => addReceive(player.id, 'miss')} className="flex-1 px-3 py-2 bg-red-400 text-red-900 rounded-lg font-bold hover:bg-red-500 active:scale-95 transition-all text-sm">×</button>
+                      <button onClick={() => undoLastReceive(player.id)} className="px-3 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 active:scale-95 transition-all" title="直前のレシーブを取消">
+                        <Undo size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 成績テーブル - モバイル版 (縦積み) */}
+        <div className="md:hidden space-y-4">
+          {startingPlayers.map((player, index) => (
+            <div key={player.id} className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-gray-100">
+              {/* 選手名ヘッダー */}
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-black text-lg">
+                    {index + 1}
+                  </div>
+                  <span className="text-xl font-black flex-1">{player.name}</span>
+                  {currentSet.serveTurn === 'our' && index === 0 && (
+                    <span className="px-3 py-1 bg-amber-400 text-amber-900 rounded-full font-black text-sm">S</span>
+                  )}
+                  {currentSet.serveTurn === 'opponent' && index === 0 && (
+                    <span className="px-3 py-1 bg-blue-400 text-blue-900 rounded-full font-black text-sm">R</span>
+                  )}
+                </div>
+              </div>
+
+              {/* サーブセクション */}
+              <div className="p-4 border-b-2 border-gray-100">
+                <h4 className="text-sm font-black text-green-600 mb-3">サーブ</h4>
+                <div className="flex flex-wrap gap-2 mb-3 min-h-[56px]">
+                  {(currentSet.serves || [])
+                    .filter(s => s.playerId === player.id)
+                    .map((serve) => (
+                      <span
+                        key={serve.id}
+                        className={`w-14 h-14 rounded-full flex items-center justify-center font-black text-xl shadow-md border-2 ${
+                          serve.quality === 'ace' ? 'bg-yellow-400 text-yellow-900 border-yellow-600' :
+                          serve.quality === 'good' ? 'bg-green-400 text-green-900 border-green-600' :
+                          serve.quality === 'normal' ? 'bg-blue-400 text-blue-900 border-blue-600' :
+                          'bg-red-400 text-red-900 border-red-600'
+                        }`}
+                      >
+                        {serve.quality === 'ace' ? '★' : serve.quality === 'good' ? '◎' : serve.quality === 'normal' ? '○' : '×'}
+                        <span className="absolute text-xs font-mono -mt-10">{serve.round}</span>
+                      </span>
+                    ))}
+                </div>
+                <div className="grid grid-cols-5 gap-2 no-print">
+                  <button onClick={() => addServe(player.id, 'ace')} className="h-14 bg-yellow-400 text-yellow-900 rounded-lg font-black text-lg hover:bg-yellow-500 active:scale-95 transition-all">★</button>
+                  <button onClick={() => addServe(player.id, 'good')} className="h-14 bg-green-400 text-green-900 rounded-lg font-black text-lg hover:bg-green-500 active:scale-95 transition-all">◎</button>
+                  <button onClick={() => addServe(player.id, 'normal')} className="h-14 bg-blue-400 text-blue-900 rounded-lg font-black text-lg hover:bg-blue-500 active:scale-95 transition-all">○</button>
+                  <button onClick={() => addServe(player.id, 'miss')} className="h-14 bg-red-400 text-red-900 rounded-lg font-black text-lg hover:bg-red-500 active:scale-95 transition-all">×</button>
+                  <button onClick={() => undoLastServe(player.id)} className="h-14 bg-gray-300 rounded-lg hover:bg-gray-400 active:scale-95 transition-all flex items-center justify-center">
+                    <Undo size={20} />
+                  </button>
+                </div>
+              </div>
+
+              {/* サーブレシーブセクション */}
+              <div className="p-4">
+                <h4 className="text-sm font-black text-blue-600 mb-3">サーブレシーブ</h4>
+                <div className="flex flex-wrap gap-2 mb-3 min-h-[56px]">
+                  {(currentSet.receives || [])
+                    .filter(r => r.playerId === player.id)
+                    .map((receive) => (
+                      <span
+                        key={receive.id}
+                        className={`w-14 h-14 rounded-full flex items-center justify-center font-black text-xl shadow-md border-2 ${
+                          receive.quality === 'perfect' ? 'bg-yellow-400 text-yellow-900 border-yellow-600' :
+                          receive.quality === 'good' ? 'bg-green-400 text-green-900 border-green-600' :
+                          receive.quality === 'follow' ? 'bg-blue-400 text-blue-900 border-blue-600' :
+                          'bg-red-400 text-red-900 border-red-600'
+                        }`}
+                      >
+                        {receive.quality === 'perfect' ? '◎' : receive.quality === 'good' ? '○' : receive.quality === 'follow' ? '△' : '×'}
+                        <span className="absolute text-xs font-mono -mt-10">{receive.round}</span>
+                      </span>
+                    ))}
+                </div>
+                <div className="grid grid-cols-5 gap-2 no-print">
+                  <button onClick={() => addReceive(player.id, 'perfect')} className="h-14 bg-yellow-400 text-yellow-900 rounded-lg font-black text-lg hover:bg-yellow-500 active:scale-95 transition-all">◎</button>
+                  <button onClick={() => addReceive(player.id, 'good')} className="h-14 bg-green-400 text-green-900 rounded-lg font-black text-lg hover:bg-green-500 active:scale-95 transition-all">○</button>
+                  <button onClick={() => addReceive(player.id, 'follow')} className="h-14 bg-blue-400 text-blue-900 rounded-lg font-black text-lg hover:bg-blue-500 active:scale-95 transition-all">△</button>
+                  <button onClick={() => addReceive(player.id, 'miss')} className="h-14 bg-red-400 text-red-900 rounded-lg font-black text-lg hover:bg-red-500 active:scale-95 transition-all">×</button>
+                  <button onClick={() => undoLastReceive(player.id)} className="h-14 bg-gray-300 rounded-lg hover:bg-gray-400 active:scale-95 transition-all flex items-center justify-center">
+                    <Undo size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+           {/* 選手交代 */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-100">
+          <h3 className="text-2xl font-black text-gray-800 mb-6 flex items-center gap-3">
+            <RotateCw size={28} className="text-indigo-600" />
+            選手交代
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 no-print">
+            <div className="md:col-span-3">
+              <label className="block text-sm font-bold text-gray-700 mb-2">OUT (ベンチへ)</label>
+              <select
+                value={inPlayerName}
+                onChange={(e) => setInPlayerName(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-indigo-500 focus:outline-none font-bold text-lg"
+              >
+                <option value="">コート内の選手を選択</option>
+                {startingPlayers.map(p => (
+                  <option key={p.id} value={p.name}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end justify-center">
+              <div className="text-4xl font-black text-indigo-600">→</div>
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-sm font-bold text-gray-700 mb-2">IN (コートへ)</label>
+              <input
+                type="text"
+                value={benchPlayerName}
+                onChange={(e) => setBenchPlayerName(e.target.value)}
+                placeholder="ベンチの選手名を入力"
+                list="bench-players"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-indigo-500 focus:outline-none font-bold text-lg"
+              />
+              <datalist id="bench-players">
+                {benchPlayers.map(p => (
+                  <option key={p.id} value={p.name} />
+                ))}
+              </datalist>
+            </div>
+            <button
+              onClick={handleSubstitution}
+              disabled={!benchPlayerName.trim() || !inPlayerName.trim()}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold shadow-lg hover:from-indigo-600 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed active:scale-95 transition-all"
+            >
+              交代実行
+            </button>
+          </div>
+        </div>
+
+        {/* ベンチ・控え選手 */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-100">
+          <h3 className="text-2xl font-black text-gray-800 mb-6">ベンチ・控え選手</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {benchPlayers.map(player => (
+              <div key={player.id} className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200 font-bold text-gray-700 text-center">
+                {player.name}
+              </div>
+            ))}
+            {addingPlayer === 'bench' ? (
+              <div className="flex gap-2 no-print">
+                <input
+                  type="text"
+                  placeholder="選手名"
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-indigo-500 focus:outline-none font-bold"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                      addPlayer('bench', e.currentTarget.value.trim());
+                    }
+                  }}
+                  autoFocus
+                />
+                <button
+                  onClick={() => setAddingPlayer(null)}
+                  className="px-3 py-3 bg-gray-300 rounded-xl hover:bg-gray-400 active:scale-95 transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setAddingPlayer('bench')}
+                className="p-4 bg-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-200 active:scale-95 transition-all border-2 border-indigo-300 no-print"
+              >
+                + ベンチ選手追加
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 交代履歴 */}
+        {currentSet.substitutions && currentSet.substitutions.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-100">
+            <h3 className="text-2xl font-black text-gray-800 mb-6">交代履歴</h3>
+            <div className="space-y-3">
+              {currentSet.substitutions.map(sub => (
+                <div key={sub.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border-2 border-gray-200 group hover:border-indigo-300 transition-all">
+                  <div className="flex items-center gap-4 flex-1">
+                    <span className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold border-2 border-red-300">{sub.outPlayerName}</span>
+                    <span className="text-2xl text-gray-400">→</span>
+                    <span className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-bold border-2 border-green-300">{sub.inPlayerName}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <span className="text-gray-400 text-[9px] block mb-0.5">SCORE</span>
-                      <span className="text-indigo-700 font-black font-mono">{sub.score}</span>
+                      <div className="text-xs text-gray-500 font-bold">得点時</div>
+                      <div className="text-lg font-black text-indigo-600 font-mono">{sub.score}</div>
                     </div>
                     <button
                       onClick={() => removeSubstitution(sub.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white p-1.5 rounded-lg hover:bg-red-600 active:scale-90 no-print"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 active:scale-90 no-print"
                       title="この交代記録を削除"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
               ))}
-              {(currentSet.substitutions || []).length === 0 && <p className="text-xs text-gray-300 italic py-2">交代履歴はありません</p>}
+            </div>
+          </div>
+           )}
+          {/* 凡例 */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-100">
+          <h3 className="text-2xl font-black text-gray-800 mb-6">記号の意味</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* サーブ凡例 */}
+            <div>
+              <h4 className="text-lg font-black text-green-600 mb-4">サーブ</h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <span className="w-12 h-12 rounded-full bg-yellow-400 text-yellow-900 border-2 border-yellow-600 flex items-center justify-center font-black text-xl shadow-md">★</span>
+                  <span className="font-bold text-gray-700">サービスエース</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="w-12 h-12 rounded-full bg-green-400 text-green-900 border-2 border-green-600 flex items-center justify-center font-black text-xl shadow-md">◎</span>
+                  <span className="font-bold text-gray-700">サーブ成功（相手崩す）</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="w-12 h-12 rounded-full bg-blue-400 text-blue-900 border-2 border-blue-600 flex items-center justify-center font-black text-xl shadow-md">○</span>
+                  <span className="font-bold text-gray-700">サーブ成功（普通）</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="w-12 h-12 rounded-full bg-red-400 text-red-900 border-2 border-red-600 flex items-center justify-center font-black text-xl shadow-md">×</span>
+                  <span className="font-bold text-gray-700">サーブミス</span>
+                </div>
+              </div>
+            </div>
+
+            {/* サーブレシーブ凡例 */}
+            <div>
+              <h4 className="text-lg font-black text-blue-600 mb-4">サーブレシーブ</h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <span className="w-12 h-12 rounded-full bg-yellow-400 text-yellow-900 border-2 border-yellow-600 flex items-center justify-center font-black text-xl shadow-md">◎</span>
+                  <span className="font-bold text-gray-700">レシーブ成功（セッターへ）</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="w-12 h-12 rounded-full bg-green-400 text-green-900 border-2 border-green-600 flex items-center justify-center font-black text-xl shadow-md">○</span>
+                  <span className="font-bold text-gray-700">レシーブ成功（セッター以外へ）</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="w-12 h-12 rounded-full bg-blue-400 text-blue-900 border-2 border-blue-600 flex items-center justify-center font-black text-xl shadow-md">△</span>
+                  <span className="font-bold text-gray-700">レシーブ成功（フォローでつながる）</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="w-12 h-12 rounded-full bg-red-400 text-red-900 border-2 border-red-600 flex items-center justify-center font-black text-xl shadow-md">×</span>
+                  <span className="font-bold text-gray-700">レシーブ失敗</span>
+                </div>
+              </div>
+            </div>
+
+            {/* その他の記号 */}
+            <div className="md:col-span-2">
+              <h4 className="text-lg font-black text-indigo-600 mb-4">その他</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-4">
+                  <span className="px-4 py-2 bg-amber-100 text-amber-700 rounded-full font-black border-2 border-amber-300">S</span>
+                  <span className="font-bold text-gray-700">サーブ権あり（自チームのサーブ）</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-black border-2 border-blue-300">R</span>
+                  <span className="font-bold text-gray-700">レシーブ側（相手チームのサーブ）</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded border">数字</span>
+                  <span className="font-bold text-gray-700">記号上の小さい数字はラウンド番号</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* 記号凡例 */}
-        <div className="bg-gray-900 text-white p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] shadow-lg">
-          <div className="space-y-2 border-r border-white/10 pr-4">
-            <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">サーブ</div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">◎</span><span className="opacity-70">セッターピンポイント</span></div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">○</span><span className="opacity-70">セッターが動く</span></div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">△</span><span className="opacity-70">セッター以外</span></div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">×</span><span className="opacity-70">サーブミス</span></div>
-          </div>
-          <div className="space-y-2 border-r border-white/10 pr-4">
-            <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">サーブレシーブ</div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">◎</span><span className="opacity-70">セッターに返せた</span></div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">○</span><span className="opacity-70">返したがセッター以外</span></div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">△</span><span className="opacity-70">フォローでつながった</span></div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">×</span><span className="opacity-70">レシーブ失敗</span></div>
-          </div>
-          <div className="space-y-2 pl-2">
-            <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">共通</div>
-            <div className="flex gap-3 items-center"><span className="text-red-500 font-black text-lg leading-none">★</span><span className="opacity-70">ノータッチ / 相手弾く</span></div>
-            <div className="flex gap-3 items-center"><span className="text-gray-100 font-black text-lg leading-none">★</span><span className="opacity-70">取られたが繋がらず</span></div>
-            <div className="flex gap-3 items-center"><span className="text-green-400 font-black text-lg leading-none">✓</span><span className="opacity-70">1巡目 / 2巡目(✓✓)</span></div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">S</span><span className="opacity-70">先行（サーブ権あり）</span></div>
-            <div className="flex gap-3 items-center"><span className="w-5 h-5 flex items-center justify-center bg-white/10 rounded font-black">R</span><span className="opacity-70">後攻（レシーブから）</span></div>
-          </div>
-        </div>
-      </div>
-         {/* 取り消しボタン */}
-      <div className="fixed bottom-8 right-8 no-print flex flex-col gap-3">
-        <button onClick={undoLastReceive} 
-          className="bg-green-500 text-white w-16 h-16 rounded-full shadow-2xl flex flex-col items-center justify-center font-black hover:bg-green-600 active:scale-95 transition-all group"
-          title="レシーブ記録を一手戻す"
-        >
-          <RotateCcw size={20} className="group-hover:-rotate-45 transition-transform" />
-          <span className="text-[8px] mt-0.5">RCV</span>
-        </button>
-        <button onClick={undoLastService} 
-          className="bg-red-500 text-white w-16 h-16 rounded-full shadow-2xl flex flex-col items-center justify-center font-black hover:bg-red-600 active:scale-95 transition-all group"
-          title="サーブ記録を一手戻す"
-        >
-          <RotateCcw size={20} className="group-hover:-rotate-45 transition-transform" />
-          <span className="text-[8px] mt-0.5">SRV</span>
-        </button>
       </div>
     </div>
   );
 };
 
 export default MatchDetail;
-      
