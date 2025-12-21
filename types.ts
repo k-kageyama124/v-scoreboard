@@ -1,7 +1,8 @@
-
 export type ServiceQuality = 'pinpoint' | 'setter_move' | 'other' | 'miss';
 
 export type PointType = 'none' | 'red_star' | 'black_star';
+
+export type ReceiveQuality = 'perfect' | 'good' | 'follow' | 'miss';
 
 export interface ServiceRecord {
   id: string;
@@ -10,6 +11,15 @@ export interface ServiceRecord {
   round: 1 | 2;
   quality: ServiceQuality;
   pointType: PointType;
+  timestamp: number;
+}
+
+export interface ReceiveRecord {
+  id: string;
+  playerId: string;
+  playerName: string;
+  round: 1 | 2;
+  quality: ReceiveQuality;
   timestamp: number;
 }
 
@@ -36,8 +46,9 @@ export interface MatchSet {
   opponentScore: number;
   serveTurn: 'S' | 'R';
   lineup: Player[];
-  bench: Player[]; // 控え選手リスト
+  bench: Player[];
   services: ServiceRecord[];
+  receives: ReceiveRecord[];
   substitutions: Substitution[];
 }
 
@@ -47,5 +58,5 @@ export interface Match {
   tournament: string;
   opponent: string;
   sets: MatchSet[];
-  result: 'win' | 'loss';
+  result: 'win' | 'lose'; // ★ 'lose' に統一
 }
