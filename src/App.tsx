@@ -15,7 +15,6 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Firebaseからデータをリアルタイムで取得
   useEffect(() => {
     const matchesRef = ref(database, 'matches');
     
@@ -25,10 +24,17 @@ const App: React.FC = () => {
         try {
           const data = snapshot.val();
           if (data) {
-            const matchesArray = Object.keys(data).map(key => ({
-              ...data[key],
-              id: key
-            }));
+            const matchesArray = Object.keys(data).map(key => {
+              const match = data[key];
+              // データ正規化：setsが存在しない場合は空配列を追加
+              if (!match.sets || !Array.isArray(match.sets) || match.sets.length === 0) {
+                match.sets = [createEmptySet()];
+              }
+              return {
+                ...match,
+                id: key
+              };
+            });
             setMatches(matchesArray);
           } else {
             setMatches([]);
@@ -44,7 +50,7 @@ const App: React.FC = () => {
       },
       (err) => {
         console.error('Firebase接続エラー:', err);
-        setError('Firebaseへの接続に失敗しました。ルール設定を確認してください。');
+        setError('Firebaseへの接続に失敗しました');
         setMatches([]);
         setLoading(false);
       }
@@ -52,6 +58,17 @@ const App: React.FC = () => {
 
     return () => unsubscribe();
   }, []);
+
+  const createEmptySet = (): MatchSet => ({
+    ourScore: 0,
+    opponentScore: 0,
+    serveTurn: 'our',
+    players: [],
+    serves: [],
+    receives: [],
+    substitutions: [],
+    currentRound: 1
+  });
 
   const handleAddMatch = (data: Partial<Match>) => {
     const newMatchId = crypto.randomUUID();
@@ -65,7 +82,6 @@ const App: React.FC = () => {
       ...data
     } as Match;
 
-    // Firebaseに保存
     const matchRef = ref(database, `matches/${newMatchId}`);
     set(matchRef, newMatch)
       .then(() => {
@@ -77,17 +93,6 @@ const App: React.FC = () => {
         alert('データの保存に失敗しました');
       });
   };
-
-  const createEmptySet = (): MatchSet => ({
-    ourScore: 0,
-    opponentScore: 0,
-    serveTurn: 'our',
-    players: [],
-    serves: [],
-    receives: [],
-    substitutions: [],
-    currentRound: 1
-  });
 
   const updateMatch = (updatedMatch: Match) => {
     const matchRef = ref(database, `matches/${updatedMatch.id}`);
@@ -112,7 +117,6 @@ const App: React.FC = () => {
     }
   };
 
-  // 検索機能（配列がundefinedの場合に対応）
   const filteredMatches = Array.isArray(matches) ? matches.filter(match => {
     const query = searchQuery.toLowerCase();
     return (
@@ -123,7 +127,6 @@ const App: React.FC = () => {
 
   const activeMatch = matches.find(m => m.id === activeMatchId);
 
-  // ローディング表示
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -135,7 +138,6 @@ const App: React.FC = () => {
     );
   }
 
-  // エラー表示
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -144,15 +146,6 @@ const App: React.FC = () => {
           <p className="text-red-600 mb-4">{error}</p>
           <p className="text-sm text-red-500">
             Firebase Consoleでデータベースのルール設定を確認してください。
-            <br/>
-            <a 
-              href="https://console.firebase.google.com/project/scoreboard-92ed4/database" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="underline hover:text-red-700"
-            >
-              Firebase Consoleを開く
-            </a>
           </p>
         </div>
       </div>
