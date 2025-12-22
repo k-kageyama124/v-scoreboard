@@ -38,13 +38,48 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
     updateSet({ serveTurn: currentSet.serveTurn === 'our' ? 'opponent' : 'our' });
   };
 
+  const addNewSet = () => {
+    const newSet: MatchSet = {
+      ourScore: 0,
+      opponentScore: 0,
+      serveTurn: 'our',
+      players: [],
+      serves: [],
+      receives: [],
+      substitutions: []
+    };
+    const newSets = [...match.sets, newSet];
+    onUpdate({ ...match, sets: newSets });
+    setCurrentSetIndex(newSets.length - 1);
+  };
+
+  const switchToSet = (index: number) => {
+    if (index >= match.sets.length) {
+      // セットが存在しない場合は作成
+      const setsToAdd = index - match.sets.length + 1;
+      const newSets = [...match.sets];
+      for (let i = 0; i < setsToAdd; i++) {
+        newSets.push({
+          ourScore: 0,
+          opponentScore: 0,
+          serveTurn: 'our',
+          players: [],
+          serves: [],
+          receives: [],
+          substitutions: []
+        });
+      }
+      onUpdate({ ...match, sets: newSets });
+    }
+    setCurrentSetIndex(index);
+  };
+
   const addPlayer = (position: 'starting' | 'bench', playerName: string) => {
     const newPlayer: Player = {
       id: Date.now().toString(),
       name: playerName,
       position,
-      serveRound: 1,
-      initialServeTurn: null
+      serveRound: 1
     };
     
     const newPlayers = [...currentSet.players, newPlayer];
@@ -63,13 +98,6 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
     updateSet({ players: newPlayers });
   };
 
-  const updatePlayerInitialServeTurn = (playerId: string, serveTurn: 'S' | 'R' | null) => {
-    const newPlayers = currentSet.players.map(p => 
-      p.id === playerId ? { ...p, initialServeTurn: serveTurn } : p
-    );
-    updateSet({ players: newPlayers });
-  };
-
   const handleSubstitution = () => {
     if (!benchPlayerName.trim() || !inPlayerName.trim()) return;
 
@@ -77,38 +105,48 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
       p.name === inPlayerName ? { ...p, position: 'bench' as const } : p
     );
 
-    const benchPlayer = currentSet.players.find(p => p.name === benchPlayerName);
-    if (benchPlayer) {
-      const newInPlayer: Player = {
+    // 既存の選手を探す
+    const existingPlayer = currentSet.players.find(p => p.name === benchPlayerName);
+    
+    if (existingPlayer) {
+      // 既存の選手の場合、positionをstartingに変更
+      const updatedPlayers = newPlayers.map(p =>
+        p.name === benchPlayerName ? { ...p, position: 'starting' as const } : p
+      );
+      
+      const newSubstitution: SubstitutionRecord = {
         id: Date.now().toString(),
-        name: benchPlayerName,
-        position: 'starting' as const,
-        serveRound: 1,
-        initialServeTurn: null
+        outPlayerName: inPlayerName,
+        inPlayerName: benchPlayerName,
+        score: `${currentSet.ourScore}-${currentSet.opponentScore}`
       };
-      newPlayers.push(newInPlayer);
+
+      updateSet({
+        players: updatedPlayers,
+        substitutions: [...(currentSet.substitutions || []), newSubstitution]
+      });
     } else {
+      // 新規選手の場合
       const newInPlayer: Player = {
         id: Date.now().toString(),
         name: benchPlayerName,
         position: 'starting' as const,
-        serveRound: 1,
-        initialServeTurn: null
+        serveRound: 1
       };
       newPlayers.push(newInPlayer);
+
+      const newSubstitution: SubstitutionRecord = {
+        id: Date.now().toString(),
+        outPlayerName: inPlayerName,
+        inPlayerName: benchPlayerName,
+        score: `${currentSet.ourScore}-${currentSet.opponentScore}`
+      };
+
+      updateSet({
+        players: newPlayers,
+        substitutions: [...(currentSet.substitutions || []), newSubstitution]
+      });
     }
-
-    const newSubstitution: SubstitutionRecord = {
-      id: Date.now().toString(),
-      outPlayerName: inPlayerName,
-      inPlayerName: benchPlayerName,
-      score: `${currentSet.ourScore}-${currentSet.opponentScore}`
-    };
-
-    updateSet({
-      players: newPlayers,
-      substitutions: [...(currentSet.substitutions || []), newSubstitution]
-    });
 
     setBenchPlayerName('');
     setInPlayerName('');
@@ -259,22 +297,24 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
 
         <div id="match-detail-capture">
           <div className="bg-white border-2 border-gray-300 rounded-lg p-6 mb-6">
+            {/* セット選択 */}
             <div className="flex gap-4 mb-4">
-              {match.sets.map((set, index) => (
+              {[1, 2, 3, 4, 5].map((setNum) => (
                 <button
-                  key={index}
-                  onClick={() => setCurrentSetIndex(index)}
+                  key={setNum}
+                  onClick={() => switchToSet(setNum - 1)}
                   className={`px-6 py-2 rounded border-2 font-bold ${
-                    currentSetIndex === index
+                    currentSetIndex === setNum - 1
                       ? 'bg-indigo-600 text-white border-indigo-600'
                       : 'bg-white border-gray-300'
                   }`}
                 >
-                  第{index + 1}セット
+                  第{setNum}セット
                 </button>
               ))}
             </div>
 
+            {/* スコア表示 */}
             <div className="grid grid-cols-3 gap-6 mb-6">
               <div className="text-center border-2 border-gray-300 p-4 rounded">
                 <div className="text-sm font-bold mb-2">自チーム</div>
@@ -286,8 +326,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
               </div>
 
               <div className="flex flex-col items-center justify-center gap-3">
-                <div className="text-lg font-bold">
-                  現在: {currentSet.serveTurn === 'our' ? 'S（自チーム）' : 'R（相手）'}
+                <div className="text-4xl font-black">
+                  {currentSet.serveTurn === 'our' ? 'S' : 'R'}
                 </div>
                 <button
                   onClick={toggleServeTurn}
@@ -351,7 +391,6 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
                 <tr className="bg-gray-100 border-b-2 border-gray-300">
                   <th className="border-r-2 border-gray-300 p-3 text-left font-bold">選手名</th>
                   <th className="border-r-2 border-gray-300 p-3 text-center font-bold">巡目</th>
-                  <th className="border-r-2 border-gray-300 p-3 text-center font-bold">S/R</th>
                   <th className="border-r-2 border-gray-300 p-3 text-center font-bold">サーブ</th>
                   <th className="p-3 text-center font-bold">レシーブ</th>
                 </tr>
@@ -368,56 +407,32 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
                         <div className="flex items-center gap-2">
                           <span className="font-bold">{index + 1}.</span>
                           <span className="font-bold">{player.name}</span>
-                          {!isStarting && <span className="text-xs text-gray-500">(交代済)</span>}
+                          {!isStarting && <span className="text-xs text-gray-500">(ベンチ)</span>}
                         </div>
                       </td>
 
                       <td className="border-r-2 border-gray-300 p-3">
-                        {isStarting ? (
-                          <div className="flex gap-1 justify-center no-print">
-                            <button
-                              onClick={() => updatePlayerServeRound(player.id, 1)}
-                              className={`px-3 py-1 border-2 rounded ${player.serveRound === 1 ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300'}`}
-                            >
-                              1
-                            </button>
-                            <button
-                              onClick={() => updatePlayerServeRound(player.id, 2)}
-                              className={`px-3 py-1 border-2 rounded ${player.serveRound === 2 ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300'}`}
-                            >
-                              2
-                            </button>
-                            <button
-                              onClick={() => updatePlayerServeRound(player.id, 3)}
-                              className={`px-3 py-1 border-2 rounded ${player.serveRound === 3 ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300'}`}
-                            >
-                              3
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="text-center">{player.serveRound || 1}</div>
-                        )}
-                      </td>
-
-                      <td className="border-r-2 border-gray-300 p-3">
-                        {isStarting ? (
-                          <div className="flex gap-1 justify-center no-print">
-                            <button
-                              onClick={() => updatePlayerInitialServeTurn(player.id, 'S')}
-                              className={`px-3 py-1 border-2 rounded font-bold ${player.initialServeTurn === 'S' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300'}`}
-                            >
-                              S
-                            </button>
-                            <button
-                              onClick={() => updatePlayerInitialServeTurn(player.id, 'R')}
-                              className={`px-3 py-1 border-2 rounded font-bold ${player.initialServeTurn === 'R' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300'}`}
-                            >
-                              R
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="text-center font-bold">{player.initialServeTurn || ''}</div>
-                        )}
+                        <div className="flex gap-1 justify-center no-print">
+                          <button
+                            onClick={() => updatePlayerServeRound(player.id, 1)}
+                            className={`px-3 py-1 border-2 rounded ${player.serveRound === 1 ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300'}`}
+                          >
+                            1
+                          </button>
+                          <button
+                            onClick={() => updatePlayerServeRound(player.id, 2)}
+                            className={`px-3 py-1 border-2 rounded ${player.serveRound === 2 ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300'}`}
+                          >
+                            2
+                          </button>
+                          <button
+                            onClick={() => updatePlayerServeRound(player.id, 3)}
+                            className={`px-3 py-1 border-2 rounded ${player.serveRound === 3 ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300'}`}
+                          >
+                            3
+                          </button>
+                        </div>
+                        <div className="text-center print-only">{player.serveRound || 1}</div>
                       </td>
 
                       <td className="border-r-2 border-gray-300 p-3">
@@ -431,19 +446,17 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
                             );
                           })}
                         </div>
-                        {isStarting && (
-                          <div className="flex gap-1 justify-center no-print">
-                            <button onClick={() => addServe(player.id, 'ace')} className="px-2 py-1 border rounded text-xs">赤★</button>
-                            <button onClick={() => addServe(player.id, 'good')} className="px-2 py-1 border rounded text-xs">◎</button>
-                            <button onClick={() => addServe(player.id, 'normal')} className="px-2 py-1 border rounded text-xs">○</button>
-                            <button onClick={() => addServe(player.id, 'follow')} className="px-2 py-1 border rounded text-xs">△</button>
-                            <button onClick={() => addServe(player.id, 'caught')} className="px-2 py-1 border rounded text-xs">黒★</button>
-                            <button onClick={() => addServe(player.id, 'miss')} className="px-2 py-1 border rounded text-xs">―</button>
-                            <button onClick={() => undoLastServe(player.id)} className="px-2 py-1 bg-gray-200 rounded text-xs">
-                              <Undo size={12} />
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex gap-1 justify-center no-print">
+                          <button onClick={() => addServe(player.id, 'ace')} className="px-2 py-1 border rounded text-xs">赤★</button>
+                          <button onClick={() => addServe(player.id, 'good')} className="px-2 py-1 border rounded text-xs">◎</button>
+                          <button onClick={() => addServe(player.id, 'normal')} className="px-2 py-1 border rounded text-xs">○</button>
+                          <button onClick={() => addServe(player.id, 'follow')} className="px-2 py-1 border rounded text-xs">△</button>
+                          <button onClick={() => addServe(player.id, 'caught')} className="px-2 py-1 border rounded text-xs">黒★</button>
+                          <button onClick={() => addServe(player.id, 'miss')} className="px-2 py-1 border rounded text-xs">―</button>
+                          <button onClick={() => undoLastServe(player.id)} className="px-2 py-1 bg-gray-200 rounded text-xs">
+                            <Undo size={12} />
+                          </button>
+                        </div>
                       </td>
 
                       <td className="p-3">
@@ -454,17 +467,15 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
                             </span>
                           ))}
                         </div>
-                        {isStarting && (
-                          <div className="flex gap-1 justify-center no-print">
-                            <button onClick={() => addReceive(player.id, 'perfect')} className="px-2 py-1 border rounded text-xs">◎</button>
-                            <button onClick={() => addReceive(player.id, 'good')} className="px-2 py-1 border rounded text-xs">○</button>
-                            <button onClick={() => addReceive(player.id, 'follow')} className="px-2 py-1 border rounded text-xs">△</button>
-                            <button onClick={() => addReceive(player.id, 'miss')} className="px-2 py-1 border rounded text-xs">×</button>
-                            <button onClick={() => undoLastReceive(player.id)} className="px-2 py-1 bg-gray-200 rounded text-xs">
-                              <Undo size={12} />
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex gap-1 justify-center no-print">
+                          <button onClick={() => addReceive(player.id, 'perfect')} className="px-2 py-1 border rounded text-xs">◎</button>
+                          <button onClick={() => addReceive(player.id, 'good')} className="px-2 py-1 border rounded text-xs">○</button>
+                          <button onClick={() => addReceive(player.id, 'follow')} className="px-2 py-1 border rounded text-xs">△</button>
+                          <button onClick={() => addReceive(player.id, 'miss')} className="px-2 py-1 border rounded text-xs">×</button>
+                          <button onClick={() => undoLastReceive(player.id)} className="px-2 py-1 bg-gray-200 rounded text-xs">
+                            <Undo size={12} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -500,8 +511,14 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
                 value={benchPlayerName}
                 onChange={(e) => setBenchPlayerName(e.target.value)}
                 placeholder="選手名"
+                list="bench-players"
                 className="w-full px-3 py-2 border-2 rounded"
               />
+              <datalist id="bench-players">
+                {benchPlayers.map(p => (
+                  <option key={p.id} value={p.name} />
+                ))}
+              </datalist>
             </div>
             <button
               onClick={handleSubstitution}
@@ -537,7 +554,6 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
           </div>
         )}
 
-        {/* 記号の説明 */}
         <div className="border-2 border-gray-300 rounded-lg p-6">
           <h3 className="text-xl font-bold mb-4">記号の説明</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -602,7 +618,7 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-bold">S/R</span>
-                  <span>ゲームスタート時のサーブ権（S=サーブ権あり、R=レシーブ側）</span>
+                  <span>現在のサーブ権（S=自チームのサーブ、R=相手のサーブ）</span>
                 </div>
               </div>
             </div>
@@ -613,4 +629,4 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
   );
 };
 
-export default MatchDetail;
+export default MatchDetail
