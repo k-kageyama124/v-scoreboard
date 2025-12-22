@@ -1,4 +1,4 @@
-Copyimport React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Match, Player, ServeQuality, ReceiveQuality } from '../types';
 import { ArrowLeft, Save, UserPlus, Users, Target, Activity } from 'lucide-react';
 import html2canvas from 'html2canvas';
