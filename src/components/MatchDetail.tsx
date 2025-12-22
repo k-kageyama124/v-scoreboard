@@ -592,5 +592,3 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     </div>
   );
 }
-Response
-Created file /home/u
