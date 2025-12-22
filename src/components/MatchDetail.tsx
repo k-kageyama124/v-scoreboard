@@ -43,8 +43,8 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
       id: Date.now().toString(),
       name: playerName,
       position,
-      serveRound: 1, // 初期値は1巡目
-      initialServeTurn: null // 初期サーブ権
+      serveRound: 1,
+      initialServeTurn: null
     };
     
     const newPlayers = [...currentSet.players, newPlayer];
@@ -162,16 +162,16 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
   };
 
   const undoLastReceive = (playerId: string) => {
-  const receives = currentSet.receives || [];
-  const playerReceives = receives.filter(r => r.playerId === playerId);
-  
-  if (playerReceives.length === 0) return;
-  
-  const lastReceive = playerReceives[playerReceives.length - 1];
-  updateSet({
-    receives: receives.filter(r => r.id !== lastReceive.id)
-  });
-};
+    const receives = currentSet.receives || [];
+    const playerReceives = receives.filter(r => r.playerId === playerId);
+    
+    if (playerReceives.length === 0) return;
+    
+    const lastReceive = playerReceives[playerReceives.length - 1];
+    updateSet({
+      receives: receives.filter(r => r.id !== lastReceive.id)
+    });
+  };
 
   const captureImage = async () => {
     const element = document.getElementById('match-detail-capture');
@@ -285,10 +285,13 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center">
+              <div className="flex flex-col items-center justify-center gap-3">
+                <div className="text-lg font-bold">
+                  現在: {currentSet.serveTurn === 'our' ? 'S（自チーム）' : 'R（相手）'}
+                </div>
                 <button
                   onClick={toggleServeTurn}
-                  className="px-6 py-3 bg-amber-500 text-white rounded font-bold no-print"
+                  className="px-8 py-3 bg-amber-500 text-white rounded font-bold no-print hover:bg-amber-600"
                 >
                   切替
                 </button>
@@ -533,6 +536,78 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
             </div>
           </div>
         )}
+
+        {/* 記号の説明 */}
+        <div className="border-2 border-gray-300 rounded-lg p-6">
+          <h3 className="text-xl font-bold mb-4">記号の説明</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-bold mb-3 text-lg">サーブ側</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold text-red-600">★</span>
+                  <span>赤星 = ノータッチエースor相手が弾いた</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">◎</span>
+                  <span>セッターピンポイント</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">○</span>
+                  <span>セッターが動く</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">△</span>
+                  <span>セッター以外</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">★</span>
+                  <span>黒星 = 取られたけど繋がらなかった</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">―</span>
+                  <span>サーブミス</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-bold mb-3 text-lg">レシーブ側</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">◎</span>
+                  <span>セッターに返した</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">○</span>
+                  <span>レシーブできた</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">△</span>
+                  <span>味方のフォローが必要だった</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">×</span>
+                  <span>レシーブ失敗</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <h4 className="font-bold mb-3 text-lg">その他</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="font-bold">巡目</span>
+                  <span>サーブが何巡目かを記録（1, 2, 3）</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold">S/R</span>
+                  <span>ゲームスタート時のサーブ権（S=サーブ権あり、R=レシーブ側）</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
