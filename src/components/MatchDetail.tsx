@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Match, Player, ServeQuality, ReceiveQuality } from '../types';
 import { ArrowLeft, Save, UserPlus, Users, Edit2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -28,6 +28,30 @@ type ReceiveDetailsType = {
 
 export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProps) {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
+  
+  // 選手が存在しない場合、自動的に6人分作成
+  useEffect(() => {
+    const currentSet = match.sets[currentSetIndex];
+    if (!currentSet.players || currentSet.players.length === 0) {
+      console.log('⚠️ 選手が存在しないため、6人分の選手を自動作成します');
+      
+      const updatedMatch = { ...match };
+      const initialPlayers = Array.from({ length: 6 }, (_, index) => ({
+        id: `player-${Date.now()}-${index}`,
+        name: '',
+        number: index + 1
+      }));
+
+      // 全てのセットに選手を追加
+      updatedMatch.sets = updatedMatch.sets.map(set => ({
+        ...set,
+        players: set.players && set.players.length > 0 ? set.players : initialPlayers
+      }));
+
+      onUpdate(updatedMatch);
+    }
+  }, [match, currentSetIndex, onUpdate]);
+
   const currentSet = match.sets[currentSetIndex];
 
   const [benchPlayerName, setBenchPlayerName] = useState('');
@@ -42,10 +66,19 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     
     const updatedMatch = { ...match };
     while (updatedMatch.sets.length <= index) {
+      // 前のセットの選手をコピー、または6人分の空欄選手を作成
+      const previousPlayers = currentSet.players && currentSet.players.length > 0 
+        ? currentSet.players 
+        : Array.from({ length: 6 }, (_, i) => ({
+            id: `player-${Date.now()}-${i}`,
+            name: '',
+            number: i + 1
+          }));
+
       updatedMatch.sets.push({
         ourScore: 0,
         opponentScore: 0,
-        players: currentSet.players, // 前のセットの選手をコピー
+        players: previousPlayers,
         serves: [],
         receives: [],
         substitutions: []
@@ -265,6 +298,18 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       .map(r => receiveButtons.find(btn => btn.quality === r.quality)?.symbol || '?');
   };
 
+  // 選手データがない場合の表示
+  if (!currentSet || !currentSet.players || currentSet.players.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">データ読み込み中...</h2>
+          <p className="text-gray-600">選手データを準備しています。</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="max-w-6xl mx-auto">
@@ -299,13 +344,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               {/* スコア表示 */}
               <div className="flex justify-center items-center gap-8">
                 <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">我々</p>
+                  <p className="text-sm text-gray-600 mb-2">自チーム</p>
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => updateScore('ourScore', currentSet.ourScore - 1)}
                       className="w-10 h-10 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold text-xl"
                     >
-                      -
+                      -1
                     </button>
                     <div className="w-24 h-16 bg-white border-4 border-purple-500 rounded-lg flex items-center justify-center">
                       <span className="text-4xl font-bold text-purple-700">{currentSet.ourScore}</span>
@@ -314,12 +359,12 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                       onClick={() => updateScore('ourScore', currentSet.ourScore + 1)}
                       className="w-10 h-10 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold text-xl"
                     >
-                      +
+                      +1
                     </button>
                   </div>
                 </div>
 
-                <div className="text-4xl font-bold text-gray-400">:</div>
+                <div className="text-4xl font-bold text-gray-400">-</div>
 
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">相手</p>
@@ -328,7 +373,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                       onClick={() => updateScore('opponentScore', currentSet.opponentScore - 1)}
                       className="w-10 h-10 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold text-xl"
                     >
-                      -
+                      -1
                     </button>
                     <div className="w-24 h-16 bg-white border-4 border-blue-500 rounded-lg flex items-center justify-center">
                       <span className="text-4xl font-bold text-blue-700">{currentSet.opponentScore}</span>
@@ -337,7 +382,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                       onClick={() => updateScore('opponentScore', currentSet.opponentScore + 1)}
                       className="w-10 h-10 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold text-xl"
                     >
-                      +
+                      +1
                     </button>
                   </div>
                 </div>
@@ -368,12 +413,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               <Users size={24} />
               選手記録
             </h3>
-
-            {currentSet.players.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                選手が登録されていません
-              </div>
-            )}
 
             {currentSet.players.map((player) => {
               const serveRecords = getPlayerServeRecords(player.id);
@@ -486,7 +525,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             })}
           </div>
 
-          {/* 交代履歴（上に配置） */}
+          {/* 交代履歴 */}
           {currentSet.substitutions.length > 0 && (
             <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
               <h3 className="text-xl font-bold text-gray-800 mb-4">交代履歴</h3>
@@ -502,7 +541,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           )}
 
-          {/* 選手交代入力（下に配置） */}
+          {/* 選手交代入力 */}
           <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <UserPlus size={24} />
