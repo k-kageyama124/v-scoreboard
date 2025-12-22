@@ -1,75 +1,115 @@
 import React, { useState } from 'react';
 import { Match } from '../types';
-import { X } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 
 interface MatchFormProps {
-  onSubmit: (data: Partial<Match>) => void;
-  onClose: () => void;
+  onSubmit: (match: Omit<Match, 'id'>) => void;
+  onCancel: () => void;
 }
 
-const MatchForm: React.FC<MatchFormProps> = ({ onSubmit, onClose }) => {
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    tournament: '',
-    opponent: '',
-  });
+export default function MatchForm({ onSubmit, onCancel }: MatchFormProps) {
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [tournamentName, setTournamentName] = useState('');
+  const [opponent, setOpponent] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!tournamentName.trim() || !opponent.trim()) {
+      alert('大会名と対戦相手を入力してください');
+      return;
+    }
+
+    onSubmit({
+      date,
+      tournamentName: tournamentName.trim(),
+      opponent: opponent.trim(),
+      sets: [{
+        ourScore: 0,
+        opponentScore: 0,
+        players: [],
+        serves: [],
+        receives: [],
+        substitutions: []
+      }]
+    });
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
-        <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="font-bold text-lg">新規試合の追加</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full text-gray-400">
-            <X size={20} />
-          </button>
-        </div>
-        
-        <form className="p-6 space-y-4" onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }}>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">試合日</label>
-            <input 
-              type="date" 
-              required
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-              value={formData.date}
-              onChange={e => setFormData({...formData, date: e.target.value})}
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">大会・練習試合名</label>
-            <input 
-              type="text" 
-              placeholder="例: 発芽杯"
-              required
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-              value={formData.tournament}
-              onChange={e => setFormData({...formData, tournament: e.target.value})}
-            />
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-purple-100">
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={onCancel}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft size={24} />
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800">新規試合登録</h2>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">対戦相手</label>
-            <input 
-              type="text" 
-              placeholder="例: 桶川西"
-              required
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-              value={formData.opponent}
-              onChange={e => setFormData({...formData, opponent: e.target.value})}
-            />
-          </div>
-          
-          <button 
-            type="submit"
-            className="w-full bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-800 transition-colors active:scale-95 mt-4"
-          >
-            試合を開始する
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                試合日
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                大会名
+              </label>
+              <input
+                type="text"
+                value={tournamentName}
+                onChange={(e) => setTournamentName(e.target.value)}
+                placeholder="例: 春季大会"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                対戦相手
+              </label>
+              <input
+                type="text"
+                value={opponent}
+                onChange={(e) => setOpponent(e.target.value)}
+                placeholder="例: ○○クラブ"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                required
+              />
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                type="submit"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all font-bold"
+              >
+                <Save size={20} />
+                <span>登録</span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
-};
-
-export default MatchForm;
+}
