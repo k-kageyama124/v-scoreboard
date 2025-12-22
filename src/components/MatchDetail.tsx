@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Match, Player, ServeQuality, ReceiveQuality } from '../types';
-import { ArrowLeft, Save, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Save, UserPlus, Users, Edit2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 interface MatchDetailProps {
@@ -17,8 +17,6 @@ type ServeDetailsType = {
   'red-star': number;
   'black-star': number;
   'dash': number;
-  'check1': number;
-  'check2': number;
 };
 
 type ReceiveDetailsType = {
@@ -34,8 +32,10 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
   const [benchPlayerName, setBenchPlayerName] = useState('');
   const [inPlayerName, setInPlayerName] = useState('');
-  const [serveTurn, setServeTurn] = useState<'S' | 'R'>('S');
-  const [playerRounds, setPlayerRounds] = useState<Record<string, 1 | 2 | 3>>({});
+  
+  // 選手名編集用のstate
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+  const [editingPlayerName, setEditingPlayerName] = useState('');
 
   const handleSetChange = (index: number) => {
     setCurrentSetIndex(index);
@@ -45,590 +45,579 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       updatedMatch.sets.push({
         ourScore: 0,
         opponentScore: 0,
-        players: [],
+        players: currentSet.players, // 前のセットの選手をコピー
         serves: [],
         receives: [],
         substitutions: []
       });
     }
-    
     onUpdate(updatedMatch);
   };
 
-  const handleScoreChange = (team: 'our' | 'opponent', delta: number) => {
+  const updateScore = (field: 'ourScore' | 'opponentScore', value: number) => {
     const updatedMatch = { ...match };
-    const set = updatedMatch.sets[currentSetIndex];
-    
-    if (team === 'our') {
-      set.ourScore = Math.max(0, set.ourScore + delta);
+    updatedMatch.sets[currentSetIndex][field] = Math.max(0, value);
+    onUpdate(updatedMatch);
+  };
+
+  const addRecord = (playerId: string, type: 'serve' | 'receive', quality: ServeQuality | ReceiveQuality) => {
+    const updatedMatch = { ...match };
+    const currentSetData = updatedMatch.sets[currentSetIndex];
+
+    if (type === 'serve') {
+      currentSetData.serves.push({
+        playerId,
+        quality: quality as ServeQuality,
+        timestamp: Date.now()
+      });
     } else {
-      set.opponentScore = Math.max(0, set.opponentScore + delta);
+      currentSetData.receives.push({
+        playerId,
+        quality: quality as ReceiveQuality,
+        timestamp: Date.now()
+      });
     }
-    
+
     onUpdate(updatedMatch);
   };
 
   const handleSubstitution = () => {
     if (!benchPlayerName.trim() || !inPlayerName.trim()) {
-      alert('ベンチ選手名と入る選手名を入力してください');
+      alert('交代する選手と入る選手を入力してください');
       return;
     }
 
     const updatedMatch = { ...match };
-    const set = updatedMatch.sets[currentSetIndex];
+    const currentSetData = updatedMatch.sets[currentSetIndex];
 
-    set.substitutions = set.substitutions || [];
-    set.substitutions.push({
-      id: Date.now().toString(),
-      outPlayerName: benchPlayerName.trim(),
-      inPlayerName: inPlayerName.trim(),
-      score: `${set.ourScore}-${set.opponentScore}`
-    });
+    const benchPlayerIndex = currentSetData.players.findIndex(
+      (p) => p.name.toLowerCase() === benchPlayerName.toLowerCase()
+    );
 
-    const existingPlayer = set.players.find(p => p.name === inPlayerName.trim());
-    if (!existingPlayer) {
-      const newPlayer = {
-        id: Date.now().toString(),
-        name: inPlayerName.trim(),
-        position: 'unknown'
-      };
-      set.players.push(newPlayer);
-      setPlayerRounds(prev => ({ ...prev, [newPlayer.id]: 1 }));
-    }
-
-    onUpdate(updatedMatch);
-    setBenchPlayerName('');
-    setInPlayerName('');
-  };
-
-  const togglePlayerRound = (playerId: string) => {
-    setPlayerRounds(prev => {
-      const current = prev[playerId] || 1;
-      const next = current === 1 ? 2 : current === 2 ? 3 : 1;
-      return { ...prev, [playerId]: next as 1 | 2 | 3 };
-    });
-  };
-
-  const addRecord = (playerId: string, type: 'serve' | 'receive', quality: ServeQuality | ReceiveQuality) => {
-    const updatedMatch = { ...match };
-    const set = updatedMatch.sets[currentSetIndex];
-
-    if (type === 'serve') {
-      set.serves = set.serves || [];
-      set.serves.push({
-        id: Date.now().toString(),
-        playerId: playerId,
-        quality: quality as ServeQuality,
-        round: playerRounds[playerId] || 1
+    if (benchPlayerIndex !== -1) {
+      currentSetData.players[benchPlayerIndex].name = inPlayerName.trim();
+      currentSetData.substitutions.push({
+        outPlayer: benchPlayerName.trim(),
+        inPlayer: inPlayerName.trim(),
+        timestamp: Date.now()
       });
+
+      onUpdate(updatedMatch);
+      setBenchPlayerName('');
+      setInPlayerName('');
     } else {
-      set.receives = set.receives || [];
-      set.receives.push({
-        id: Date.now().toString(),
-        playerId: playerId,
-        quality: quality as ReceiveQuality,
-        round: 1
-      });
+      alert('交代する選手が見つかりません');
+    }
+  };
+
+  // 選手名編集の開始
+  const startEditingPlayer = (player: Player) => {
+    setEditingPlayerId(player.id);
+    setEditingPlayerName(player.name);
+  };
+
+  // 選手名編集の保存
+  const savePlayerName = (playerId: string) => {
+    const trimmedName = editingPlayerName.trim();
+    
+    if (trimmedName === '') {
+      alert('選手名を入力してください');
+      return;
     }
 
+    const updatedMatch = { ...match };
+    
+    // 全てのセットで該当選手の名前を更新
+    updatedMatch.sets.forEach(set => {
+      const playerIndex = set.players.findIndex(p => p.id === playerId);
+      if (playerIndex !== -1) {
+        set.players[playerIndex].name = trimmedName;
+      }
+    });
+
     onUpdate(updatedMatch);
+    setEditingPlayerId(null);
+    setEditingPlayerName('');
   };
 
-  const allPlayers: Player[] = [];
-  const seenNames = new Set<string>();
+  // 選手名編集のキャンセル
+  const cancelEditingPlayer = () => {
+    setEditingPlayerId(null);
+    setEditingPlayerName('');
+  };
 
-  match.sets.forEach(set => {
-    set.players.forEach(p => {
-      if (!seenNames.has(p.name)) {
-        seenNames.add(p.name);
-        allPlayers.push(p);
-        if (!playerRounds[p.id]) {
-          setPlayerRounds(prev => ({ ...prev, [p.id]: 1 }));
+  // 統合データ取得
+  const getAggregatedPlayerData = () => {
+    const playerMap = new Map<string, {
+      id: string;
+      name: string;
+      rotation: number;
+      totalServes: number;
+      totalReceives: number;
+      serveDetails: ServeDetailsType;
+      receiveDetails: ReceiveDetailsType;
+    }>();
+
+    match.sets.forEach((set) => {
+      set.players.forEach((player) => {
+        if (!playerMap.has(player.id)) {
+          playerMap.set(player.id, {
+            id: player.id,
+            name: player.name,
+            rotation: 1,
+            totalServes: 0,
+            totalReceives: 0,
+            serveDetails: {
+              'serve-miss': 0,
+              'setter-move': 0,
+              'setter-pinpoint': 0,
+              'other-than-setter': 0,
+              'red-star': 0,
+              'black-star': 0,
+              'dash': 0
+            },
+            receiveDetails: {
+              'setter-return': 0,
+              'no-return': 0,
+              'setter-pinpoint': 0,
+              'other-than-setter': 0
+            }
+          });
         }
-      }
-    });
-  });
+      });
 
-  const getPlayerRecords = (playerId: string, type: 'serve' | 'receive') => {
-    const records: string[] = [];
-    
-    match.sets.forEach(set => {
-      if (type === 'serve' && set.serves) {
-        set.serves
-          .filter(s => s.playerId === playerId)
-          .forEach(s => {
-            records.push(getServeSymbol(s.quality));
-          });
-      } else if (type === 'receive' && set.receives) {
-        set.receives
-          .filter(r => r.playerId === playerId)
-          .forEach(r => {
-            records.push(getReceiveSymbol(r.quality));
-          });
-      }
-    });
-    
-    return records.join(' ');
-  };
+      set.serves.forEach((serve) => {
+        const playerData = playerMap.get(serve.playerId);
+        if (playerData) {
+          playerData.totalServes++;
+          playerData.serveDetails[serve.quality]++;
+        }
+      });
 
-  const calculatePlayerStats = (playerId: string) => {
-    const player = allPlayers.find(p => p.id === playerId);
-    if (!player) return null;
-
-    let totalServes = 0;
-    let totalReceives = 0;
-    const serveDetails: ServeDetailsType = {
-      'serve-miss': 0,
-      'setter-move': 0,
-      'setter-pinpoint': 0,
-      'other-than-setter': 0,
-      'red-star': 0,
-      'black-star': 0,
-      'dash': 0,
-      'check1': 0,
-      'check2': 0
-    };
-    const receiveDetails: ReceiveDetailsType = {
-      'setter-return': 0,
-      'no-return': 0,
-      'setter-pinpoint': 0,
-      'other-than-setter': 0
-    };
-
-    match.sets.forEach(set => {
-      if (set.serves) {
-        set.serves
-          .filter(s => s.playerId === playerId)
-          .forEach(s => {
-            totalServes++;
-            serveDetails[s.quality]++;
-          });
-      }
-      if (set.receives) {
-        set.receives
-          .filter(r => r.playerId === playerId)
-          .forEach(r => {
-            totalReceives++;
-            receiveDetails[r.quality]++;
-          });
-      }
+      set.receives.forEach((receive) => {
+        const playerData = playerMap.get(receive.playerId);
+        if (playerData) {
+          playerData.totalReceives++;
+          playerData.receiveDetails[receive.quality]++;
+        }
+      });
     });
 
-    return { player, totalServes, totalReceives, serveDetails, receiveDetails };
+    return Array.from(playerMap.values());
   };
 
   const saveAsImage = async () => {
     const element = document.getElementById('match-detail-capture');
-    if (!element) {
-      alert('キャプチャ対象が見つかりませんでした');
-      return;
-    }
+    if (!element) return;
 
     try {
       const canvas = await html2canvas(element, {
-        backgroundColor: '#f3f4f6',
+        backgroundColor: '#ffffff',
         scale: 2,
-        logging: false
+        logging: false,
+        useCORS: true
       });
 
-      const link = document.createElement('a');
-      link.download = `${match.tournamentName || '試合'}_${match.opponent || '対戦相手'}_第${currentSetIndex + 1}セット.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `試合記録_${match.date}_${match.opponent}.png`;
+          link.click();
+          URL.revokeObjectURL(url);
+        }
+      });
     } catch (error) {
       console.error('画像保存エラー:', error);
       alert('画像の保存に失敗しました');
     }
   };
 
-  const toggleServeTurn = () => {
-    setServeTurn(prev => prev === 'S' ? 'R' : 'S');
+  const aggregatedData = getAggregatedPlayerData();
+
+  const serveButtons: Array<{ quality: ServeQuality; symbol: string; color: string }> = [
+    { quality: 'serve-miss', symbol: '×', color: 'bg-red-500' },
+    { quality: 'setter-move', symbol: '○', color: 'bg-blue-500' },
+    { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-green-500' },
+    { quality: 'other-than-setter', symbol: '△', color: 'bg-yellow-500' },
+    { quality: 'red-star', symbol: '★', color: 'bg-red-600' },
+    { quality: 'black-star', symbol: '★', color: 'bg-gray-800' },
+    { quality: 'dash', symbol: '━', color: 'bg-purple-500' }
+  ];
+
+  const receiveButtons: Array<{ quality: ReceiveQuality; symbol: string; color: string }> = [
+    { quality: 'setter-return', symbol: '×', color: 'bg-red-500' },
+    { quality: 'no-return', symbol: '○', color: 'bg-blue-500' },
+    { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-green-500' },
+    { quality: 'other-than-setter', symbol: '△', color: 'bg-yellow-500' }
+  ];
+
+  const getPlayerServeRecords = (playerId: string) => {
+    return currentSet.serves
+      .filter(s => s.playerId === playerId)
+      .map(s => serveButtons.find(btn => btn.quality === s.quality)?.symbol || '?');
   };
 
-  const getServeSymbol = (quality: ServeQuality): string => {
-    const symbols: Record<ServeQuality, string> = {
-      'serve-miss': '×',
-      'setter-move': '○',
-      'setter-pinpoint': '◎',
-      'other-than-setter': '△',
-      'red-star': '★',
-      'black-star': '★',
-      'dash': '━',
-      'check1': '✓',
-      'check2': '✓✓'
-    };
-    return symbols[quality] || '';
-  };
-
-  const getReceiveSymbol = (quality: ReceiveQuality): string => {
-    const symbols: Record<ReceiveQuality, string> = {
-      'setter-return': '◎',
-      'no-return': '×',
-      'setter-pinpoint': '○',
-      'other-than-setter': '△'
-    };
-    return symbols[quality] || '';
+  const getPlayerReceiveRecords = (playerId: string) => {
+    return currentSet.receives
+      .filter(r => r.playerId === playerId)
+      .map(r => receiveButtons.find(btn => btn.quality === r.quality)?.symbol || '?');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6">
           <button
             onClick={onBack}
             className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
           >
             <ArrowLeft size={20} />
-            <span>戻る</span>
+            <span>試合一覧に戻る</span>
           </button>
-
           <button
             onClick={saveAsImage}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-shadow"
           >
             <Save size={20} />
-            <span className="font-bold">画像保存</span>
+            <span>画像として保存</span>
           </button>
         </div>
 
-        <div id="match-detail-capture" className="space-y-6 p-6 bg-gray-100 rounded-2xl">
-          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-gray-100">
-            <div className="mb-6 text-center space-y-2">
-              <h1 className="text-3xl font-bold text-purple-600">
-                {match.tournamentName || '大会名未設定'}
-              </h1>
-              <p className="text-xl text-gray-700">
-                vs {match.opponent || '対戦相手未設定'}
-              </p>
-            </div>
+        <div id="match-detail-capture" className="bg-white rounded-2xl shadow-xl p-8 space-y-8">
+          {/* スコア表示エリア */}
+          <div className="border-4 border-purple-600 rounded-xl p-6 bg-gradient-to-r from-purple-50 to-blue-50">
+            <div className="space-y-4">
+              {/* 大会名と対戦相手 */}
+              <div className="text-center space-y-2 pb-4 border-b-2 border-purple-300">
+                <h2 className="text-3xl font-bold text-purple-800">{match.tournamentName}</h2>
+                <p className="text-xl text-gray-700">vs {match.opponent}</p>
+                <p className="text-sm text-gray-600">{match.date}</p>
+              </div>
 
-            <div className="flex gap-2 mb-6 justify-center flex-wrap">
-              {[0, 1, 2, 3, 4].map(index => (
-                <button
-                  key={index}
-                  onClick={() => handleSetChange(index)}
-                  className={`px-6 py-3 rounded-lg font-bold transition-all ${
-                    currentSetIndex === index
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg scale-105'
-                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                  }`}
-                >
-                  第{index + 1}セット
-                </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 text-center">
-                <div className="text-sm text-blue-600 font-semibold mb-2">自チーム</div>
-                <div className="text-6xl font-bold text-blue-600 mb-4">{currentSet.ourScore}</div>
-                <div className="flex gap-2 justify-center">
-                  <button
-                    onClick={() => handleScoreChange('our', 1)}
-                    className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-bold"
-                  >
-                    +1
-                  </button>
-                  <button
-                    onClick={() => handleScoreChange('our', -1)}
-                    className="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold"
-                  >
-                    -1
-                  </button>
+              {/* スコア表示 */}
+              <div className="flex justify-center items-center gap-8">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">我々</p>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => updateScore('ourScore', currentSet.ourScore - 1)}
+                      className="w-10 h-10 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold text-xl"
+                    >
+                      -
+                    </button>
+                    <div className="w-24 h-16 bg-white border-4 border-purple-500 rounded-lg flex items-center justify-center">
+                      <span className="text-4xl font-bold text-purple-700">{currentSet.ourScore}</span>
+                    </div>
+                    <button
+                      onClick={() => updateScore('ourScore', currentSet.ourScore + 1)}
+                      className="w-10 h-10 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold text-xl"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-center">
-                <button
-                  onClick={toggleServeTurn}
-                  className={`px-8 py-4 rounded-xl font-bold text-2xl transition-all shadow-lg ${
-                    serveTurn === 'S'
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-                      : 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
-                  }`}
-                >
-                  {serveTurn}
-                </button>
-              </div>
+                <div className="text-4xl font-bold text-gray-400">:</div>
 
-              <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 text-center">
-                <div className="text-sm text-red-600 font-semibold mb-2">相手チーム</div>
-                <div className="text-6xl font-bold text-red-600 mb-4">{currentSet.opponentScore}</div>
-                <div className="flex gap-2 justify-center">
-                  <button
-                    onClick={() => handleScoreChange('opponent', 1)}
-                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold"
-                  >
-                    +1
-                  </button>
-                  <button
-                    onClick={() => handleScoreChange('opponent', -1)}
-                    className="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold"
-                  >
-                    -1
-                  </button>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">相手</p>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => updateScore('opponentScore', currentSet.opponentScore - 1)}
+                      className="w-10 h-10 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold text-xl"
+                    >
+                      -
+                    </button>
+                    <div className="w-24 h-16 bg-white border-4 border-blue-500 rounded-lg flex items-center justify-center">
+                      <span className="text-4xl font-bold text-blue-700">{currentSet.opponentScore}</span>
+                    </div>
+                    <button
+                      onClick={() => updateScore('opponentScore', currentSet.opponentScore + 1)}
+                      className="w-10 h-10 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold text-xl"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-indigo-100">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">選手記録</h3>
-            
-            {allPlayers.length === 0 ? (
+          {/* セット切り替え */}
+          <div className="flex gap-2 justify-center">
+            {[0, 1, 2, 3, 4].map((index) => (
+              <button
+                key={index}
+                onClick={() => handleSetChange(index)}
+                className={`px-6 py-3 rounded-lg font-bold transition-all ${
+                  currentSetIndex === index
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                第{index + 1}セット
+              </button>
+            ))}
+          </div>
+
+          {/* 選手ごとの記録欄 */}
+          <div className="space-y-6">
+            <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Users size={24} />
+              選手記録
+            </h3>
+
+            {currentSet.players.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                <p>選手交代で選手を追加してください</p>
+                選手が登録されていません
               </div>
-            ) : (
-              <div className="space-y-4">
-                {allPlayers.map((player) => (
-                  <div key={player.id} className="border-2 border-gray-200 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-lg font-bold text-gray-800">選手: {player.name}</h4>
-                      <button
-                        onClick={() => togglePlayerRound(player.id)}
-                        className="px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-sm font-bold text-purple-700 transition-colors"
-                      >
-                        {playerRounds[player.id] || 1}巡目
-                      </button>
-                    </div>
-                    
-                    <div className="border-t-2 border-gray-200 pt-3 mb-3">
-                      <div className="mb-2">
-                        <span className="font-semibold text-blue-600">S:</span>
-                        <span className="ml-2 text-gray-700">{getPlayerRecords(player.id, 'serve') || '(記録なし)'}</span>
-                      </div>
-                      <div>
-                        <span className="font-semibold text-green-600">R:</span>
-                        <span className="ml-2 text-gray-700">{getPlayerRecords(player.id, 'receive') || '(記録なし)'}</span>
-                      </div>
-                    </div>
+            )}
 
-                    <div className="mb-3">
-                      <div className="text-sm font-semibold text-blue-600 mb-2">サーブボタン</div>
-                      <div className="flex flex-wrap gap-2">
+            {currentSet.players.map((player) => {
+              const serveRecords = getPlayerServeRecords(player.id);
+              const receiveRecords = getPlayerReceiveRecords(player.id);
+              const isEditing = editingPlayerId === player.id;
+
+              return (
+                <div key={player.id} className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+                  {/* 選手名表示・編集エリア */}
+                  <div className="mb-4 pb-3 border-b-2 border-gray-300">
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editingPlayerName}
+                          onChange={(e) => setEditingPlayerName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              savePlayerName(player.id);
+                            } else if (e.key === 'Escape') {
+                              cancelEditingPlayer();
+                            }
+                          }}
+                          className="flex-1 px-3 py-2 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                          placeholder="選手名を入力"
+                          autoFocus
+                        />
                         <button
-                          onClick={() => addRecord(player.id, 'serve', 'serve-miss')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                          onClick={() => savePlayerName(player.id)}
+                          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
                         >
-                          ×
+                          保存
                         </button>
                         <button
-                          onClick={() => addRecord(player.id, 'serve', 'setter-move')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                          onClick={cancelEditingPlayer}
+                          className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold"
                         >
-                          ○
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'serve', 'setter-pinpoint')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          ◎
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'serve', 'other-than-setter')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          △
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'serve', 'red-star')}
-                          className="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-sm font-medium transition-colors text-red-600"
-                        >
-                          ★
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'serve', 'black-star')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          ★
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'serve', 'dash')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          ━
+                          キャンセル
                         </button>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <span className="text-xl font-bold text-gray-800">
+                            選手: {player.name || '(未入力)'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => startEditingPlayer(player)}
+                          className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+                        >
+                          <Edit2 size={14} />
+                          編集
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
-                    <div>
-                      <div className="text-sm font-semibold text-green-600 mb-2">レシーブボタン</div>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => addRecord(player.id, 'receive', 'setter-return')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          ◎
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'receive', 'no-return')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          ×
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'receive', 'setter-pinpoint')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          ○
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'receive', 'other-than-setter')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          △
-                        </button>
+                  {/* 記録表示エリア */}
+                  <div className="grid grid-cols-[1fr_2fr] gap-4 mb-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-700 w-8">S:</span>
+                        <div className="flex-1 min-h-[2rem] p-2 bg-white rounded border border-gray-300">
+                          {serveRecords.join(' ')}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-700 w-8">R:</span>
+                        <div className="flex-1 min-h-[2rem] p-2 bg-white rounded border border-gray-300">
+                          {receiveRecords.join(' ')}
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+
+                  {/* サーブボタン */}
+                  <div className="mb-3">
+                    <p className="text-sm font-semibold text-gray-600 mb-2">サーブ:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {serveButtons.map((btn) => (
+                        <button
+                          key={btn.quality}
+                          onClick={() => addRecord(player.id, 'serve', btn.quality)}
+                          className={`${btn.color} text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity font-bold`}
+                        >
+                          {btn.symbol}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* レシーブボタン */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600 mb-2">レシーブ:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {receiveButtons.map((btn) => (
+                        <button
+                          key={btn.quality}
+                          onClick={() => addRecord(player.id, 'receive', btn.quality)}
+                          className={`${btn.color} text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity font-bold`}
+                        >
+                          {btn.symbol}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          {currentSet.substitutions && currentSet.substitutions.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-purple-100">
-              <div className="flex items-center gap-3 mb-4">
-                <Users className="text-purple-600" size={24} />
-                <h3 className="text-xl font-bold text-gray-800">交代履歴</h3>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-purple-50">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">OUT</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-purple-700">→</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">IN</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">スコア</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentSet.substitutions.map((sub, idx) => (
-                      <tr key={sub.id} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                        <td className="px-4 py-3 text-sm">{sub.outPlayerName}</td>
-                        <td className="px-4 py-3 text-center text-purple-500 font-bold">→</td>
-                        <td className="px-4 py-3 text-sm">{sub.inPlayerName}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{sub.score}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* 交代履歴（上に配置） */}
+          {currentSet.substitutions.length > 0 && (
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">交代履歴</h3>
+              <div className="space-y-2">
+                {currentSet.substitutions.map((sub, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-gray-700">
+                    <span className="font-semibold">{sub.outPlayer}</span>
+                    <span className="text-gray-500">→</span>
+                    <span className="font-semibold text-green-600">{sub.inPlayer}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-orange-100">
-            <div className="flex items-center gap-3 mb-4">
-              <UserPlus className="text-orange-600" size={24} />
-              <h3 className="text-xl font-bold text-gray-800">選手交代</h3>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 選手交代入力（下に配置） */}
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <UserPlus size={24} />
+              選手交代
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  交代する選手
+                </label>
                 <input
                   type="text"
                   value={benchPlayerName}
                   onChange={(e) => setBenchPlayerName(e.target.value)}
-                  placeholder="OUT選手名"
-                  className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  placeholder="選手名"
                 />
-                
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  入る選手
+                </label>
                 <input
                   type="text"
                   value={inPlayerName}
                   onChange={(e) => setInPlayerName(e.target.value)}
-                  placeholder="IN選手名"
-                  className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  placeholder="選手名"
                 />
-                
-                <button
-                  onClick={handleSubstitution}
-                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:shadow-lg transition-all font-bold"
-                >
-                  交代登録
-                </button>
               </div>
             </div>
+            <button
+              onClick={handleSubstitution}
+              className="mt-4 w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow font-bold"
+            >
+              交代を記録
+            </button>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-indigo-100">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">選手成績</h3>
-            
+          {/* 選手統計 */}
+          <div className="space-y-4">
+            <h3 className="text-2xl font-bold text-gray-800">選手統計（全セット）</h3>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-indigo-50">
-                    <th className="px-4 py-3 text-left font-semibold text-indigo-700">選手名</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">サーブ合計</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">×</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">○</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">◎</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">△</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700 text-red-600">★</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">★</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">━</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">レシーブ合計</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">◎</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">×</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">○</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">△</th>
+                  <tr className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                    <th className="border-2 border-purple-700 px-4 py-3 text-left">選手名</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S合計</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R合計</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S×</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S○</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S◎</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S△</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S★(赤)</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S★(黒)</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S━</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R×</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R○</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R◎</th>
+                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R△</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {allPlayers.map((player, idx) => {
-                    const stats = calculatePlayerStats(player.id);
-                    if (!stats) return null;
-
-                    return (
-                      <tr key={player.id} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                        <td className="px-4 py-3 font-medium">{stats.player.name}</td>
-                        <td className="px-2 py-3 text-center font-bold">{stats.totalServes}</td>
-                        <td className="px-2 py-3 text-center">{stats.serveDetails['serve-miss']}</td>
-                        <td className="px-2 py-3 text-center">{stats.serveDetails['setter-move']}</td>
-                        <td className="px-2 py-3 text-center">{stats.serveDetails['setter-pinpoint']}</td>
-                        <td className="px-2 py-3 text-center">{stats.serveDetails['other-than-setter']}</td>
-                        <td className="px-2 py-3 text-center text-red-600 font-bold">{stats.serveDetails['red-star']}</td>
-                        <td className="px-2 py-3 text-center font-bold">{stats.serveDetails['black-star']}</td>
-                        <td className="px-2 py-3 text-center">{stats.serveDetails['dash']}</td>
-                        <td className="px-2 py-3 text-center font-bold">{stats.totalReceives}</td>
-                        <td className="px-2 py-3 text-center">{stats.receiveDetails['setter-return']}</td>
-                        <td className="px-2 py-3 text-center">{stats.receiveDetails['no-return']}</td>
-                        <td className="px-2 py-3 text-center">{stats.receiveDetails['setter-pinpoint']}</td>
-                        <td className="px-2 py-3 text-center">{stats.receiveDetails['other-than-setter']}</td>
-                      </tr>
-                    );
-                  })}
+                  {aggregatedData.map((player, idx) => (
+                    <tr key={player.id} className={idx % 2 === 0 ? 'bg-purple-50' : 'bg-white'}>
+                      <td className="border-2 border-gray-300 px-4 py-2 font-semibold">
+                        {player.name || '(未入力)'}
+                      </td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center font-bold text-blue-600">
+                        {player.totalServes}
+                      </td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center font-bold text-green-600">
+                        {player.totalReceives}
+                      </td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['serve-miss']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['setter-move']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['setter-pinpoint']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['other-than-setter']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['red-star']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['black-star']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['dash']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.receiveDetails['setter-return']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.receiveDetails['no-return']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.receiveDetails['setter-pinpoint']}</td>
+                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.receiveDetails['other-than-setter']}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-gray-100">
-            <h3 className="text-lg font-bold text-gray-800 mb-3">記号説明</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          {/* 記号の説明 */}
+          <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">記号の意味</h3>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <h4 className="font-semibold text-blue-600 mb-2">サーブ</h4>
-                <ul className="space-y-1 text-gray-700">
+                <p className="font-semibold text-gray-700 mb-2">サーブ:</p>
+                <ul className="space-y-1 text-sm text-gray-600">
                   <li>× = ミス</li>
-                  <li>○ = セッター移動</li>
-                  <li>◎ = セッターピンポイント</li>
-                  <li>△ = セッター以外</li>
-                  <li><span className="text-red-600 font-bold">★</span> = ノータッチエース・相手はじく</li>
-                  <li>★ = 相手受けたがつなげず</li>
-                  <li>━ = サーブミス</li>
+                  <li>○ = セッターが動いた</li>
+                  <li>◎ = セッターにピンポイント</li>
+                  <li>△ = セッター以外が返した</li>
+                  <li>★(赤) = 赤い星</li>
+                  <li>★(黒) = 黒い星</li>
+                  <li>━ = ダッシュ</li>
                 </ul>
               </div>
-              
               <div>
-                <h4 className="font-semibold text-green-600 mb-2">レシーブ</h4>
-                <ul className="space-y-1 text-gray-700">
-                  <li>◎ = セッターに返球</li>
-                  <li>× = 返球できず</li>
-                  <li>○ = セッター○</li>
-                  <li>△ = セッター以外</li>
+                <p className="font-semibold text-gray-700 mb-2">レシーブ:</p>
+                <ul className="space-y-1 text-sm text-gray-600">
+                  <li>× = セッターに返らなかった</li>
+                  <li>○ = セッターに返った(動いた)</li>
+                  <li>◎ = セッターにピンポイント</li>
+                  <li>△ = セッター以外が返した</li>
                 </ul>
               </div>
             </div>
