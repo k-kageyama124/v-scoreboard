@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Match, Player, ServeQuality, ReceiveQuality } from '../types';
-import { ArrowLeft, Save, UserPlus, Users, Target, Activity } from 'lucide-react';
+import { ArrowLeft, Save, UserPlus, Users } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 interface MatchDetailProps {
@@ -9,20 +9,32 @@ interface MatchDetailProps {
   onUpdate: (match: Match) => void;
 }
 
+type ServeDetailsType = {
+  'serve-miss': number;
+  'setter-move': number;
+  'setter-pinpoint': number;
+  'other-than-setter': number;
+  'red-star': number;
+  'black-star': number;
+  'dash': number;
+  'check1': number;
+  'check2': number;
+};
+
+type ReceiveDetailsType = {
+  'setter-return': number;
+  'no-return': number;
+  'setter-pinpoint': number;
+  'other-than-setter': number;
+};
+
 export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProps) {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const currentSet = match.sets[currentSetIndex];
 
   const [benchPlayerName, setBenchPlayerName] = useState('');
   const [inPlayerName, setInPlayerName] = useState('');
-
-  const [servePlayerId, setServePlayerId] = useState('');
-  const [serveQuality, setServeQuality] = useState<ServeQuality>('setter-pinpoint');
-  const [serveRound, setServeRound] = useState<1 | 2 | 3>(1);
   const [serveTurn, setServeTurn] = useState<'S' | 'R'>('S');
-
-  const [receivePlayerId, setReceivePlayerId] = useState('');
-  const [receiveQuality, setReceiveQuality] = useState<ReceiveQuality>('setter-return');
 
   const handleSetChange = (index: number) => {
     setCurrentSetIndex(index);
@@ -86,64 +98,29 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setInPlayerName('');
   };
 
-  const addServeRecord = () => {
-    if (!servePlayerId) {
-      alert('サーブ選手を選択してください');
-      return;
-    }
-
+  const addRecord = (playerId: string, type: 'serve' | 'receive', quality: ServeQuality | ReceiveQuality) => {
     const updatedMatch = { ...match };
     const set = updatedMatch.sets[currentSetIndex];
 
-    set.serves = set.serves || [];
-    set.serves.push({
-      id: Date.now().toString(),
-      playerId: servePlayerId,
-      quality: serveQuality,
-      round: serveRound
-    });
+    if (type === 'serve') {
+      set.serves = set.serves || [];
+      set.serves.push({
+        id: Date.now().toString(),
+        playerId: playerId,
+        quality: quality as ServeQuality,
+        round: 1
+      });
+    } else {
+      set.receives = set.receives || [];
+      set.receives.push({
+        id: Date.now().toString(),
+        playerId: playerId,
+        quality: quality as ReceiveQuality,
+        round: 1
+      });
+    }
 
     onUpdate(updatedMatch);
-  };
-
-  const undoLastServe = () => {
-    const updatedMatch = { ...match };
-    const set = updatedMatch.sets[currentSetIndex];
-    
-    if (set.serves && set.serves.length > 0) {
-      set.serves = set.serves.slice(0, -1);
-      onUpdate(updatedMatch);
-    }
-  };
-
-  const addReceiveRecord = () => {
-    if (!receivePlayerId) {
-      alert('レシーブ選手を選択してください');
-      return;
-    }
-
-    const updatedMatch = { ...match };
-    const set = updatedMatch.sets[currentSetIndex];
-
-    set.receives = set.receives || [];
-    set.receives.push({
-      id: Date.now().toString(),
-      playerId: receivePlayerId,
-      quality: receiveQuality,
-      round: 1
-    });
-
-    onUpdate(updatedMatch);
-  };
-
-  const undoLastReceive = () => {
-    const updatedMatch = { ...match };
-    const set = updatedMatch.sets[currentSetIndex];
-    
-    if (set.receives && set.receives.length > 0) {
-      set.receives = set.receives.slice(0, -1);
-      onUpdate(updatedMatch);
-    }
   };
 
   const allPlayers: Player[] = [];
@@ -164,7 +141,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
     let totalServes = 0;
     let totalReceives = 0;
-    let serveDetails: Record<ServeQuality, number> = {
+    const serveDetails: ServeDetailsType = {
       'serve-miss': 0,
       'setter-move': 0,
       'setter-pinpoint': 0,
@@ -175,7 +152,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       'check1': 0,
       'check2': 0
     };
-    let receiveDetails: Record<ReceiveQuality, number> = {
+    const receiveDetails: ReceiveDetailsType = {
       'setter-return': 0,
       'no-return': 0,
       'setter-pinpoint': 0,
@@ -230,31 +207,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
   const toggleServeTurn = () => {
     setServeTurn(prev => prev === 'S' ? 'R' : 'S');
-  };
-
-  const getServeSymbol = (quality: ServeQuality): string => {
-    const symbols: Record<ServeQuality, string> = {
-      'serve-miss': '×',
-      'setter-move': '○',
-      'setter-pinpoint': '◎',
-      'other-than-setter': '△',
-      'red-star': '★',
-      'black-star': '★',
-      'dash': '━',
-      'check1': '✓',
-      'check2': '✓✓'
-    };
-    return symbols[quality] || '';
-  };
-
-  const getReceiveSymbol = (quality: ReceiveQuality): string => {
-    const symbols: Record<ReceiveQuality, string> = {
-      'setter-return': '◎',
-      'no-return': '×',
-      'setter-pinpoint': '○',
-      'other-than-setter': '△'
-    };
-    return symbols[quality] || '';
   };
 
   return (
@@ -368,115 +320,115 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           </div>
 
-          {/* サーブ記録入力 */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-blue-100">
-            <div className="flex items-center gap-3 mb-4">
-              <Target className="text-blue-600" size={24} />
-              <h3 className="text-xl font-bold text-gray-800">サーブ記録</h3>
-            </div>
+          {/* 選手ごとの記録欄 */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-indigo-100">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">選手記録</h3>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <select
-                  value={servePlayerId}
-                  onChange={(e) => setServePlayerId(e.target.value)}
-                  className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                >
-                  <option value="">選手を選択</option>
-                  {allPlayers.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={serveQuality}
-                  onChange={(e) => setServeQuality(e.target.value as ServeQuality)}
-                  className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                >
-                  <option value="serve-miss">× ミス</option>
-                  <option value="setter-move">○ セッター移動</option>
-                  <option value="setter-pinpoint">◎ セッターピンポイント</option>
-                  <option value="other-than-setter">△ セッター以外</option>
-                  <option value="red-star">★(赤) ノータッチエース</option>
-                  <option value="black-star">★(黒) 相手つなげず</option>
-                  <option value="dash">━ サーブミス</option>
-                  <option value="check1">✓ 1巡目</option>
-                  <option value="check2">✓✓ 2巡目</option>
-                </select>
-
-                <select
-                  value={serveRound}
-                  onChange={(e) => setServeRound(Number(e.target.value) as 1 | 2 | 3)}
-                  className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                >
-                  <option value={1}>1巡目</option>
-                  <option value={2}>2巡目</option>
-                  <option value={3}>3巡目</option>
-                </select>
-
-                <button
-                  onClick={addServeRecord}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all font-bold"
-                >
-                  記録
-                </button>
+            {allPlayers.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>選手交代で選手を追加してください</p>
               </div>
-              
-              <button
-                onClick={undoLastServe}
-                className="w-full md:w-auto px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all"
-              >
-                直前を取消
-              </button>
-            </div>
-          </div>
+            ) : (
+              <div className="space-y-4">
+                {allPlayers.map((player) => (
+                  <div key={player.id} className="border-2 border-gray-200 rounded-xl p-4">
+                    <h4 className="text-lg font-bold text-gray-800 mb-3">{player.name}</h4>
+                    
+                    {/* サーブ記録ボタン */}
+                    <div className="mb-3">
+                      <div className="text-sm font-semibold text-blue-600 mb-2">サーブ</div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'serve-miss')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ×
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'setter-move')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ○
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'setter-pinpoint')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ◎
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'other-than-setter')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          △
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'red-star')}
+                          className="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-sm font-medium transition-colors text-red-600"
+                        >
+                          ★
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'black-star')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ★
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'dash')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ━
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'check1')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'serve', 'check2')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ✓✓
+                        </button>
+                      </div>
+                    </div>
 
-          {/* レシーブ記録入力 */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-green-100">
-            <div className="flex items-center gap-3 mb-4">
-              <Activity className="text-green-600" size={24} />
-              <h3 className="text-xl font-bold text-gray-800">レシーブ記録</h3>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <select
-                  value={receivePlayerId}
-                  onChange={(e) => setReceivePlayerId(e.target.value)}
-                  className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                >
-                  <option value="">選手を選択</option>
-                  {allPlayers.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={receiveQuality}
-                  onChange={(e) => setReceiveQuality(e.target.value as ReceiveQuality)}
-                  className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                >
-                  <option value="setter-return">◎ セッターに返球</option>
-                  <option value="no-return">× 返球できず</option>
-                  <option value="setter-pinpoint">○ セッター○</option>
-                  <option value="other-than-setter">△ セッター以外</option>
-                </select>
-
-                <button
-                  onClick={addReceiveRecord}
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:shadow-lg transition-all font-bold"
-                >
-                  記録
-                </button>
+                    {/* レシーブ記録ボタン */}
+                    <div>
+                      <div className="text-sm font-semibold text-green-600 mb-2">レシーブ</div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => addRecord(player.id, 'receive', 'setter-return')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ◎
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'receive', 'no-return')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ×
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'receive', 'setter-pinpoint')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ○
+                        </button>
+                        <button
+                          onClick={() => addRecord(player.id, 'receive', 'other-than-setter')}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          △
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              
-              <button
-                onClick={undoLastReceive}
-                className="w-full md:w-auto px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all"
-              >
-                直前を取消
-              </button>
-            </div>
+            )}
           </div>
 
           {/* 交代履歴（上に配置） */}
@@ -640,3 +592,5 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     </div>
   );
 }
+Response
+Created file /home/u
