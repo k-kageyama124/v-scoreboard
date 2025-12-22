@@ -19,6 +19,8 @@ export interface Player {
   id: string;
   name: string;
   position: 'starting' | 'bench';
+  serveRound?: number; // サーブの巡目（1, 2, 3）
+  initialServeTurn?: 'S' | 'R' | null; // ゲームスタート時のサーブ権
 }
 
 export interface SubstitutionRecord {
@@ -36,7 +38,7 @@ export interface MatchSet {
   serves: ServeRecord[];
   receives: ReceiveRecord[];
   substitutions: SubstitutionRecord[];
-  currentRound?: number; // オプションに変更
+  currentRound?: number;
 }
 
 export interface Match {
