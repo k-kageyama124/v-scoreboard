@@ -1,4 +1,4 @@
-export type ServeQuality = 'ace' | 'good' | 'normal' | 'miss';
+export type ServeQuality = 'ace' | 'good' | 'normal' | 'follow' | 'caught' | 'miss';
 export type ReceiveQuality = 'perfect' | 'good' | 'follow' | 'miss';
 
 export interface ServeRecord {
@@ -36,7 +36,7 @@ export interface MatchSet {
   serves: ServeRecord[];
   receives: ReceiveRecord[];
   substitutions: SubstitutionRecord[];
-  currentRound: number;
+  currentRound?: number; // オプションに変更
 }
 
 export interface Match {
