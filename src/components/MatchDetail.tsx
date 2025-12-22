@@ -99,10 +99,30 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   };
 
   const addRecord = (playerId: string, type: 'serve' | 'receive', quality: ServeQuality | ReceiveQuality) => {
+    console.log('🔵 addRecord called:', { playerId, type, quality });
+    
     const updatedMatch = { ...match };
     const currentSetData = updatedMatch.sets[currentSetIndex];
 
     if (type === 'serve') {
+      currentSetData.serves.push({
+        playerId,
+        quality: quality as ServeQuality,
+        timestamp: Date.now()
+      });
+      console.log('✅ Serve added:', currentSetData.serves.length);
+    } else {
+      currentSetData.receives.push({
+        playerId,
+        quality: quality as ReceiveQuality,
+        timestamp: Date.now()
+      });
+      console.log('✅ Receive added:', currentSetData.receives.length);
+    }
+
+    console.log('🔄 Calling onUpdate...');
+    onUpdate(updatedMatch);
+  };
       currentSetData.serves.push({
         playerId,
         quality: quality as ServeQuality,
@@ -555,20 +575,37 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           )}
 
           {/* 選手交代入力 */}
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <UserPlus size={24} />
-              選手交代
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   交代する選手
                 </label>
-                <input
-                  type="text"
+                <select
                   value={benchPlayerName}
                   onChange={(e) => setBenchPlayerName(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="">選手を選択してください</option>
+                  {currentSet.players.map((player) => (
+                    <option key={player.id} value={player.name}>
+                      {player.name || '(未入力)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  入る選手
+                </label>
+                <input
+                  type="text"
+                  value={inPlayerName}
+                  onChange={(e) => setInPlayerName(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  placeholder="選手名を入力"
+                />
+              </div>
+            </div>
                   className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   placeholder="選手名"
                 />
