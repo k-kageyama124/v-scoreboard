@@ -1,11 +1,25 @@
-export type ServeQuality = 'ace' | 'good' | 'normal' | 'follow' | 'caught' | 'miss';
-export type ReceiveQuality = 'perfect' | 'good' | 'follow' | 'miss';
+export type ServeQuality = 
+  | 'serve-miss'
+  | 'setter-move'
+  | 'setter-pinpoint'
+  | 'other-than-setter'
+  | 'red-star'
+  | 'black-star'
+  | 'dash'
+  | 'check1'
+  | 'check2';
+
+export type ReceiveQuality = 
+  | 'setter-return'
+  | 'no-return'
+  | 'setter-pinpoint'
+  | 'other-than-setter';
 
 export interface ServeRecord {
   id: string;
   playerId: string;
   quality: ServeQuality;
-  round: number;
+  round: 1 | 2 | 3;
 }
 
 export interface ReceiveRecord {
@@ -18,8 +32,7 @@ export interface ReceiveRecord {
 export interface Player {
   id: string;
   name: string;
-  position: 'starting' | 'bench';
-  serveRound?: number; // サーブの巡目（1, 2, 3）
+  position: string;
 }
 
 export interface SubstitutionRecord {
@@ -32,12 +45,10 @@ export interface SubstitutionRecord {
 export interface MatchSet {
   ourScore: number;
   opponentScore: number;
-  serveTurn: 'our' | 'opponent';
   players: Player[];
   serves: ServeRecord[];
   receives: ReceiveRecord[];
   substitutions: SubstitutionRecord[];
-  currentRound?: number;
 }
 
 export interface Match {
@@ -45,6 +56,6 @@ export interface Match {
   date: string;
   tournamentName: string;
   opponent: string;
-  result: 'win' | 'lose';
+  result?: 'win' | 'lose';
   sets: MatchSet[];
 }
