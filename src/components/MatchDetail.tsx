@@ -35,6 +35,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const [benchPlayerName, setBenchPlayerName] = useState('');
   const [inPlayerName, setInPlayerName] = useState('');
   const [serveTurn, setServeTurn] = useState<'S' | 'R'>('S');
+  const [playerRounds, setPlayerRounds] = useState<Record<string, 1 | 2 | 3>>({});
 
   const handleSetChange = (index: number) => {
     setCurrentSetIndex(index);
@@ -86,16 +87,26 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
     const existingPlayer = set.players.find(p => p.name === inPlayerName.trim());
     if (!existingPlayer) {
-      set.players.push({
+      const newPlayer = {
         id: Date.now().toString(),
         name: inPlayerName.trim(),
         position: 'unknown'
-      });
+      };
+      set.players.push(newPlayer);
+      setPlayerRounds(prev => ({ ...prev, [newPlayer.id]: 1 }));
     }
 
     onUpdate(updatedMatch);
     setBenchPlayerName('');
     setInPlayerName('');
+  };
+
+  const togglePlayerRound = (playerId: string) => {
+    setPlayerRounds(prev => {
+      const current = prev[playerId] || 1;
+      const next = current === 1 ? 2 : current === 2 ? 3 : 1;
+      return { ...prev, [playerId]: next as 1 | 2 | 3 };
+    });
   };
 
   const addRecord = (playerId: string, type: 'serve' | 'receive', quality: ServeQuality | ReceiveQuality) => {
@@ -108,7 +119,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         id: Date.now().toString(),
         playerId: playerId,
         quality: quality as ServeQuality,
-        round: 1
+        round: playerRounds[playerId] || 1
       });
     } else {
       set.receives = set.receives || [];
@@ -131,9 +142,34 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       if (!seenNames.has(p.name)) {
         seenNames.add(p.name);
         allPlayers.push(p);
+        if (!playerRounds[p.id]) {
+          setPlayerRounds(prev => ({ ...prev, [p.id]: 1 }));
+        }
       }
     });
   });
+
+  const getPlayerRecords = (playerId: string, type: 'serve' | 'receive') => {
+    const records: string[] = [];
+    
+    match.sets.forEach(set => {
+      if (type === 'serve' && set.serves) {
+        set.serves
+          .filter(s => s.playerId === playerId)
+          .forEach(s => {
+            records.push(getServeSymbol(s.quality));
+          });
+      } else if (type === 'receive' && set.receives) {
+        set.receives
+          .filter(r => r.playerId === playerId)
+          .forEach(r => {
+            records.push(getReceiveSymbol(r.quality));
+          });
+      }
+    });
+    
+    return records.join(' ');
+  };
 
   const calculatePlayerStats = (playerId: string) => {
     const player = allPlayers.find(p => p.id === playerId);
@@ -209,10 +245,34 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setServeTurn(prev => prev === 'S' ? 'R' : 'S');
   };
 
+  const getServeSymbol = (quality: ServeQuality): string => {
+    const symbols: Record<ServeQuality, string> = {
+      'serve-miss': '×',
+      'setter-move': '○',
+      'setter-pinpoint': '◎',
+      'other-than-setter': '△',
+      'red-star': '★',
+      'black-star': '★',
+      'dash': '━',
+      'check1': '✓',
+      'check2': '✓✓'
+    };
+    return symbols[quality] || '';
+  };
+
+  const getReceiveSymbol = (quality: ReceiveQuality): string => {
+    const symbols: Record<ReceiveQuality, string> = {
+      'setter-return': '◎',
+      'no-return': '×',
+      'setter-pinpoint': '○',
+      'other-than-setter': '△'
+    };
+    return symbols[quality] || '';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="max-w-6xl mx-auto">
-        {/* ヘッダー（画像保存対象外） */}
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={onBack}
@@ -231,11 +291,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           </button>
         </div>
 
-        {/* 画像保存対象エリア */}
         <div id="match-detail-capture" className="space-y-6 p-6 bg-gray-100 rounded-2xl">
-          {/* スコア表示エリア（大会名・対戦相手名含む） */}
           <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-gray-100">
-            {/* 大会名・対戦相手名 */}
             <div className="mb-6 text-center space-y-2">
               <h1 className="text-3xl font-bold text-purple-600">
                 {match.tournamentName || '大会名未設定'}
@@ -245,7 +302,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               </p>
             </div>
 
-            {/* セット選択 */}
             <div className="flex gap-2 mb-6 justify-center flex-wrap">
               {[0, 1, 2, 3, 4].map(index => (
                 <button
@@ -262,9 +318,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               ))}
             </div>
 
-            {/* 得点表示 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* 自チーム */}
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 text-center">
                 <div className="text-sm text-blue-600 font-semibold mb-2">自チーム</div>
                 <div className="text-6xl font-bold text-blue-600 mb-4">{currentSet.ourScore}</div>
@@ -284,7 +338,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                 </div>
               </div>
 
-              {/* 切替ボタン */}
               <div className="flex items-center justify-center">
                 <button
                   onClick={toggleServeTurn}
@@ -298,7 +351,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                 </button>
               </div>
 
-              {/* 相手チーム */}
               <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 text-center">
                 <div className="text-sm text-red-600 font-semibold mb-2">相手チーム</div>
                 <div className="text-6xl font-bold text-red-600 mb-4">{currentSet.opponentScore}</div>
@@ -320,7 +372,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           </div>
 
-          {/* 選手ごとの記録欄 */}
           <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-indigo-100">
             <h3 className="text-xl font-bold text-gray-800 mb-4">選手記録</h3>
             
@@ -332,11 +383,29 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               <div className="space-y-4">
                 {allPlayers.map((player) => (
                   <div key={player.id} className="border-2 border-gray-200 rounded-xl p-4">
-                    <h4 className="text-lg font-bold text-gray-800 mb-3">{player.name}</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-lg font-bold text-gray-800">選手: {player.name}</h4>
+                      <button
+                        onClick={() => togglePlayerRound(player.id)}
+                        className="px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-sm font-bold text-purple-700 transition-colors"
+                      >
+                        {playerRounds[player.id] || 1}巡目
+                      </button>
+                    </div>
                     
-                    {/* サーブ記録ボタン */}
+                    <div className="border-t-2 border-gray-200 pt-3 mb-3">
+                      <div className="mb-2">
+                        <span className="font-semibold text-blue-600">S:</span>
+                        <span className="ml-2 text-gray-700">{getPlayerRecords(player.id, 'serve') || '(記録なし)'}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-green-600">R:</span>
+                        <span className="ml-2 text-gray-700">{getPlayerRecords(player.id, 'receive') || '(記録なし)'}</span>
+                      </div>
+                    </div>
+
                     <div className="mb-3">
-                      <div className="text-sm font-semibold text-blue-600 mb-2">サーブ</div>
+                      <div className="text-sm font-semibold text-blue-600 mb-2">サーブボタン</div>
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => addRecord(player.id, 'serve', 'serve-miss')}
@@ -380,24 +449,11 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                         >
                           ━
                         </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'serve', 'check1')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          onClick={() => addRecord(player.id, 'serve', 'check2')}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          ✓✓
-                        </button>
                       </div>
                     </div>
 
-                    {/* レシーブ記録ボタン */}
                     <div>
-                      <div className="text-sm font-semibold text-green-600 mb-2">レシーブ</div>
+                      <div className="text-sm font-semibold text-green-600 mb-2">レシーブボタン</div>
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => addRecord(player.id, 'receive', 'setter-return')}
@@ -431,7 +487,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             )}
           </div>
 
-          {/* 交代履歴（上に配置） */}
           {currentSet.substitutions && currentSet.substitutions.length > 0 && (
             <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-purple-100">
               <div className="flex items-center gap-3 mb-4">
@@ -464,7 +519,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           )}
 
-          {/* 選手交代入力（下に配置） */}
           <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-orange-100">
             <div className="flex items-center gap-3 mb-4">
               <UserPlus className="text-orange-600" size={24} />
@@ -499,7 +553,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           </div>
 
-          {/* 選手成績一覧 */}
           <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-indigo-100">
             <h3 className="text-xl font-bold text-gray-800 mb-4">選手成績</h3>
             
@@ -516,8 +569,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     <th className="px-2 py-3 text-center font-semibold text-indigo-700 text-red-600">★</th>
                     <th className="px-2 py-3 text-center font-semibold text-indigo-700">★</th>
                     <th className="px-2 py-3 text-center font-semibold text-indigo-700">━</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">✓</th>
-                    <th className="px-2 py-3 text-center font-semibold text-indigo-700">✓✓</th>
                     <th className="px-2 py-3 text-center font-semibold text-indigo-700">レシーブ合計</th>
                     <th className="px-2 py-3 text-center font-semibold text-indigo-700">◎</th>
                     <th className="px-2 py-3 text-center font-semibold text-indigo-700">×</th>
@@ -541,8 +592,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                         <td className="px-2 py-3 text-center text-red-600 font-bold">{stats.serveDetails['red-star']}</td>
                         <td className="px-2 py-3 text-center font-bold">{stats.serveDetails['black-star']}</td>
                         <td className="px-2 py-3 text-center">{stats.serveDetails['dash']}</td>
-                        <td className="px-2 py-3 text-center">{stats.serveDetails['check1']}</td>
-                        <td className="px-2 py-3 text-center">{stats.serveDetails['check2']}</td>
                         <td className="px-2 py-3 text-center font-bold">{stats.totalReceives}</td>
                         <td className="px-2 py-3 text-center">{stats.receiveDetails['setter-return']}</td>
                         <td className="px-2 py-3 text-center">{stats.receiveDetails['no-return']}</td>
@@ -556,7 +605,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           </div>
 
-          {/* 記号説明 */}
           <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-gray-100">
             <h3 className="text-lg font-bold text-gray-800 mb-3">記号説明</h3>
             
@@ -571,8 +619,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                   <li><span className="text-red-600 font-bold">★</span> = ノータッチエース・相手はじく</li>
                   <li>★ = 相手受けたがつなげず</li>
                   <li>━ = サーブミス</li>
-                  <li>✓ = 1巡目サーブ</li>
-                  <li>✓✓ = 2巡目サーブ</li>
                 </ul>
               </div>
               
