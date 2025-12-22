@@ -28,9 +28,12 @@ type ReceiveDetailsType = {
 
 export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProps) {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
-  
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // 選手が存在しない場合、自動的に6人分作成
   useEffect(() => {
+    if (isInitialized) return;
+
     const currentSet = match.sets[currentSetIndex];
     if (!currentSet.players || currentSet.players.length === 0) {
       console.log('⚠️ 選手が存在しないため、6人分の選手を自動作成します');
@@ -50,7 +53,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
       onUpdate(updatedMatch);
     }
-  }, [match, currentSetIndex, onUpdate]);
+    
+    setIsInitialized(true);
+  }, [match.id]); // match.idが変更されたときのみ実行
 
   const currentSet = match.sets[currentSetIndex];
 
@@ -192,6 +197,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     }>();
 
     match.sets.forEach((set) => {
+      if (!set.players) return;
+      
       set.players.forEach((player) => {
         if (!playerMap.has(player.id)) {
           playerMap.set(player.id, {
@@ -219,21 +226,25 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         }
       });
 
-      set.serves.forEach((serve) => {
-        const playerData = playerMap.get(serve.playerId);
-        if (playerData) {
-          playerData.totalServes++;
-          playerData.serveDetails[serve.quality]++;
-        }
-      });
+      if (set.serves) {
+        set.serves.forEach((serve) => {
+          const playerData = playerMap.get(serve.playerId);
+          if (playerData) {
+            playerData.totalServes++;
+            playerData.serveDetails[serve.quality]++;
+          }
+        });
+      }
 
-      set.receives.forEach((receive) => {
-        const playerData = playerMap.get(receive.playerId);
-        if (playerData) {
-          playerData.totalReceives++;
-          playerData.receiveDetails[receive.quality]++;
-        }
-      });
+      if (set.receives) {
+        set.receives.forEach((receive) => {
+          const playerData = playerMap.get(receive.playerId);
+          if (playerData) {
+            playerData.totalReceives++;
+            playerData.receiveDetails[receive.quality]++;
+          }
+        });
+      }
     });
 
     return Array.from(playerMap.values());
@@ -287,12 +298,14 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   ];
 
   const getPlayerServeRecords = (playerId: string) => {
+    if (!currentSet.serves) return [];
     return currentSet.serves
       .filter(s => s.playerId === playerId)
       .map(s => serveButtons.find(btn => btn.quality === s.quality)?.symbol || '?');
   };
 
   const getPlayerReceiveRecords = (playerId: string) => {
+    if (!currentSet.receives) return [];
     return currentSet.receives
       .filter(r => r.playerId === playerId)
       .map(r => receiveButtons.find(btn => btn.quality === r.quality)?.symbol || '?');
@@ -304,7 +317,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">データ読み込み中...</h2>
-          <p className="text-gray-600">選手データを準備しています。</p>
+          <p className="text-gray-600">選手データを準備しています。しばらくお待ちください。</p>
         </div>
       </div>
     );
@@ -526,7 +539,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           </div>
 
           {/* 交代履歴 */}
-          {currentSet.substitutions.length > 0 && (
+          {currentSet.substitutions && currentSet.substitutions.length > 0 && (
             <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
               <h3 className="text-xl font-bold text-gray-800 mb-4">交代履歴</h3>
               <div className="space-y-2">
