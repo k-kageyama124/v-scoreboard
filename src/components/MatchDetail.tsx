@@ -162,16 +162,16 @@ const MatchDetail: React.FC<MatchDetailProps> = ({ match, onUpdate, onBack }) =>
   };
 
   const undoLastReceive = (playerId: string) => {
-    const receives = currentSet.receives || [];
-    const playerReceives = receives.filter(r => r.playerId === player.id);
-    
-    if (playerReceives.length === 0) return;
-    
-    const lastReceive = playerReceives[playerReceives.length - 1];
-    updateSet({
-      receives: receives.filter(r => r.id !== lastReceive.id)
-    });
-  };
+  const receives = currentSet.receives || [];
+  const playerReceives = receives.filter(r => r.playerId === playerId);
+  
+  if (playerReceives.length === 0) return;
+  
+  const lastReceive = playerReceives[playerReceives.length - 1];
+  updateSet({
+    receives: receives.filter(r => r.id !== lastReceive.id)
+  });
+};
 
   const captureImage = async () => {
     const element = document.getElementById('match-detail-capture');
