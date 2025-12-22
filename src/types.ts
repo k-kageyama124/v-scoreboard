@@ -20,7 +20,6 @@ export interface Player {
   name: string;
   position: 'starting' | 'bench';
   serveRound?: number; // サーブの巡目（1, 2, 3）
-  initialServeTurn?: 'S' | 'R' | null; // ゲームスタート時のサーブ権
 }
 
 export interface SubstitutionRecord {
