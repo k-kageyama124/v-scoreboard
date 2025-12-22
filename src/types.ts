@@ -1,45 +1,40 @@
-export type ServeQuality = 
+export interface Player {
+  id: string;
+  name: string;
+  number: number;
+}
+
+export type ServeQuality =
   | 'serve-miss'
   | 'setter-move'
   | 'setter-pinpoint'
   | 'other-than-setter'
   | 'red-star'
   | 'black-star'
-  | 'dash'
-  | 'check1'
-  | 'check2';
+  | 'dash';
 
-export type ReceiveQuality = 
+export type ReceiveQuality =
   | 'setter-return'
   | 'no-return'
   | 'setter-pinpoint'
   | 'other-than-setter';
 
 export interface ServeRecord {
-  id: string;
   playerId: string;
   quality: ServeQuality;
-  round: 1 | 2 | 3;
+  timestamp: number;
 }
 
 export interface ReceiveRecord {
-  id: string;
   playerId: string;
   quality: ReceiveQuality;
-  round: number;
-}
-
-export interface Player {
-  id: string;
-  name: string;
-  position: string;
+  timestamp: number;
 }
 
 export interface SubstitutionRecord {
-  id: string;
-  outPlayerName: string;
-  inPlayerName: string;
-  score: string;
+  outPlayer: string;
+  inPlayer: string;
+  timestamp: number;
 }
 
 export interface MatchSet {
@@ -56,6 +51,6 @@ export interface Match {
   date: string;
   tournamentName: string;
   opponent: string;
-  result?: 'win' | 'lose';
   sets: MatchSet[];
+  result?: string;
 }
