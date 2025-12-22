@@ -20,6 +20,13 @@ export default function MatchForm({ onSubmit, onCancel }: MatchFormProps) {
       return;
     }
 
+    // 6人分の空欄選手を作成
+    const initialPlayers = Array.from({ length: 6 }, (_, index) => ({
+      id: `player-${Date.now()}-${index}`,
+      name: '', // 空欄
+      number: index + 1
+    }));
+
     onSubmit({
       date,
       tournamentName: tournamentName.trim(),
@@ -27,7 +34,7 @@ export default function MatchForm({ onSubmit, onCancel }: MatchFormProps) {
       sets: [{
         ourScore: 0,
         opponentScore: 0,
-        players: [],
+        players: initialPlayers, // 6人分の空欄選手
         serves: [],
         receives: [],
         substitutions: []
@@ -85,10 +92,16 @@ export default function MatchForm({ onSubmit, onCancel }: MatchFormProps) {
                 type="text"
                 value={opponent}
                 onChange={(e) => setOpponent(e.target.value)}
-                placeholder="例: ○○クラブ"
+                placeholder="例: ○○高校"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
                 required
               />
+            </div>
+
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                ℹ️ 試合登録後、6人分の選手名を入力できます
+              </p>
             </div>
 
             <div className="flex gap-4 pt-4">
