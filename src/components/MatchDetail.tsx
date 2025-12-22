@@ -30,6 +30,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // 選手が存在しない場合、自動的に6人分作成
   useEffect(() => {
     if (isInitialized) return;
 
@@ -44,6 +45,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         number: index + 1
       }));
 
+      // 全てのセットに選手を追加
       updatedMatch.sets = updatedMatch.sets.map(set => ({
         ...set,
         players: set.players && set.players.length > 0 ? set.players : initialPlayers
@@ -53,13 +55,14 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     }
     
     setIsInitialized(true);
-  }, [match.id]);
+  }, [match.id]); // match.idが変更されたときのみ実行
 
   const currentSet = match.sets[currentSetIndex];
 
   const [benchPlayerName, setBenchPlayerName] = useState('');
   const [inPlayerName, setInPlayerName] = useState('');
   
+  // 選手名編集用のstate
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingPlayerName, setEditingPlayerName] = useState('');
 
@@ -68,6 +71,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     
     const updatedMatch = { ...match };
     while (updatedMatch.sets.length <= index) {
+      // 前のセットの選手をコピー、または6人分の空欄選手を作成
       const previousPlayers = currentSet.players && currentSet.players.length > 0 
         ? currentSet.players 
         : Array.from({ length: 6 }, (_, i) => ({
@@ -149,11 +153,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     }
   };
 
+  // 選手名編集の開始
   const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setEditingPlayerName(player.name);
   };
 
+  // 選手名編集の保存
   const savePlayerName = (playerId: string) => {
     const trimmedName = editingPlayerName.trim();
     
@@ -164,6 +170,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
     const updatedMatch = { ...match };
     
+    // 全てのセットで該当選手の名前を更新
     updatedMatch.sets.forEach(set => {
       const playerIndex = set.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
@@ -176,11 +183,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setEditingPlayerName('');
   };
 
+  // 選手名編集のキャンセル
   const cancelEditingPlayer = () => {
     setEditingPlayerId(null);
     setEditingPlayerName('');
   };
 
+  // 統合データ取得
   const getAggregatedPlayerData = () => {
     const playerMap = new Map<string, {
       id: string;
@@ -307,6 +316,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       .map(r => receiveButtons.find(btn => btn.quality === r.quality)?.symbol || '?');
   };
 
+  // 選手データがない場合の表示
   if (!currentSet || !currentSet.players || currentSet.players.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
@@ -339,14 +349,17 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         </div>
 
         <div id="match-detail-capture" className="bg-white rounded-2xl shadow-xl p-8 space-y-8">
+          {/* スコア表示エリア */}
           <div className="border-4 border-purple-600 rounded-xl p-6 bg-gradient-to-r from-purple-50 to-blue-50">
             <div className="space-y-4">
+              {/* 大会名と対戦相手 */}
               <div className="text-center space-y-2 pb-4 border-b-2 border-purple-300">
                 <h2 className="text-3xl font-bold text-purple-800">{match.tournamentName}</h2>
                 <p className="text-xl text-gray-700">vs {match.opponent}</p>
                 <p className="text-sm text-gray-600">{match.date}</p>
               </div>
 
+              {/* スコア表示 */}
               <div className="flex justify-center items-center gap-8">
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">自チーム</p>
@@ -395,6 +408,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           </div>
 
+          {/* セット切り替え */}
           <div className="flex gap-2 justify-center">
             {[0, 1, 2, 3, 4].map((index) => (
               <button
@@ -411,6 +425,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             ))}
           </div>
 
+          {/* 選手ごとの記録欄 */}
           <div className="space-y-6">
             <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
               <Users size={24} />
@@ -424,6 +439,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
               return (
                 <div key={player.id} className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+                  {/* 選手名表示・編集エリア */}
                   <div className="mb-4 pb-3 border-b-2 border-gray-300">
                     {isEditing ? (
                       <div className="flex items-center gap-2">
@@ -473,6 +489,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     )}
                   </div>
 
+                  {/* 記録表示エリア */}
                   <div className="grid grid-cols-[1fr_2fr] gap-4 mb-4">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -490,6 +507,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     </div>
                   </div>
 
+                  {/* サーブボタン */}
                   <div className="mb-3">
                     <p className="text-sm font-semibold text-gray-600 mb-2">サーブ:</p>
                     <div className="flex flex-wrap gap-2">
@@ -505,6 +523,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     </div>
                   </div>
 
+                  {/* レシーブボタン */}
                   <div>
                     <p className="text-sm font-semibold text-gray-600 mb-2">レシーブ:</p>
                     <div className="flex flex-wrap gap-2">
@@ -524,6 +543,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             })}
           </div>
 
+          {/* 交代履歴 */}
           {currentSet.substitutions && currentSet.substitutions.length > 0 && (
             <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
               <h3 className="text-xl font-bold text-gray-800 mb-4">交代履歴</h3>
@@ -539,6 +559,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           )}
 
+          {/* 選手交代入力 */}
           <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <UserPlus size={24} />
@@ -583,6 +604,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </button>
           </div>
 
+          {/* 選手統計 */}
           <div className="space-y-4">
             <h3 className="text-2xl font-bold text-gray-800">選手統計（全セット）</h3>
             <div className="overflow-x-auto">
@@ -635,6 +657,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           </div>
 
+          {/* 記号の説明 */}
           <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">記号の意味</h3>
             <div className="grid grid-cols-2 gap-4">
