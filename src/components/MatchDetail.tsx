@@ -281,20 +281,20 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const aggregatedData = getAggregatedPlayerData();
 
   const serveButtons: Array<{ quality: ServeQuality; symbol: string; color: string }> = [
-    { quality: 'serve-miss', symbol: '×', color: 'bg-red-500' },
-    { quality: 'setter-move', symbol: '○', color: 'bg-blue-500' },
-    { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-green-500' },
-    { quality: 'other-than-setter', symbol: '△', color: 'bg-yellow-500' },
+    { quality: 'serve-miss', symbol: '×', color: 'bg-gray-600' },
+    { quality: 'setter-move', symbol: '○', color: 'bg-gray-600' },
+    { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-gray-600' },
+    { quality: 'other-than-setter', symbol: '△', color: 'bg-gray-600' },
     { quality: 'red-star', symbol: '★', color: 'bg-red-600' },
-    { quality: 'black-star', symbol: '★', color: 'bg-gray-800' },
-    { quality: 'dash', symbol: '━', color: 'bg-purple-500' }
+    { quality: 'black-star', symbol: '★', color: 'bg-gray-600' },
+    { quality: 'dash', symbol: '━', color: 'bg-gray-600' }
   ];
 
   const receiveButtons: Array<{ quality: ReceiveQuality; symbol: string; color: string }> = [
-    { quality: 'setter-return', symbol: '×', color: 'bg-red-500' },
-    { quality: 'no-return', symbol: '○', color: 'bg-blue-500' },
-    { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-green-500' },
-    { quality: 'other-than-setter', symbol: '△', color: 'bg-yellow-500' }
+    { quality: 'setter-return', symbol: '×', color: 'bg-gray-600' },
+    { quality: 'no-return', symbol: '○', color: 'bg-gray-600' },
+    { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-gray-600' },
+    { quality: 'other-than-setter', symbol: '△', color: 'bg-gray-600' }
   ];
 
   const getPlayerServeRecords = (playerId: string) => {
