@@ -141,6 +141,47 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     onUpdate(updatedMatch);
   };
 
+  const undoLastRecord = (playerId: string, type: 'serve' | 'receive') => {
+    const updatedMatch = { ...match };
+    const currentSetData = updatedMatch.sets[currentSetIndex];
+
+    if (type === 'serve') {
+      if (!currentSetData.serves) return;
+      
+      // 指定した選手のサーブ記録を取得
+      const playerServeIndices = currentSetData.serves
+        .map((s, idx) => s.playerId === playerId ? idx : -1)
+        .filter(idx => idx !== -1);
+      
+      if (playerServeIndices.length > 0) {
+        // 最後の記録を削除
+        const lastIndex = playerServeIndices[playerServeIndices.length - 1];
+        currentSetData.serves.splice(lastIndex, 1);
+        console.log('✅ Serve undone for player:', playerId);
+        onUpdate(updatedMatch);
+      } else {
+        alert('削除するサーブ記録がありません');
+      }
+    } else {
+      if (!currentSetData.receives) return;
+      
+      // 指定した選手のレシーブ記録を取得
+      const playerReceiveIndices = currentSetData.receives
+        .map((r, idx) => r.playerId === playerId ? idx : -1)
+        .filter(idx => idx !== -1);
+      
+      if (playerReceiveIndices.length > 0) {
+        // 最後の記録を削除
+        const lastIndex = playerReceiveIndices[playerReceiveIndices.length - 1];
+        currentSetData.receives.splice(lastIndex, 1);
+        console.log('✅ Receive undone for player:', playerId);
+        onUpdate(updatedMatch);
+      } else {
+        alert('削除するレシーブ記録がありません');
+      }
+    }
+  };
+
   const handleSubstitution = () => {
     if (!benchPlayerId || !inPlayerName.trim()) {
       alert('交代する選手と入る選手を入力してください');
@@ -573,7 +614,15 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                   </div>
 
                   <div className="mb-3">
-                    <p className="text-sm font-semibold text-gray-600 mb-2">サーブ:</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-semibold text-gray-600">サーブ:</p>
+                      <button
+                        onClick={() => undoLastRecord(player.id, 'serve')}
+                        className="px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold"
+                      >
+                        ← 1つ戻る
+                      </button>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {serveButtons.map((btn) => (
                         <button
@@ -588,7 +637,15 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                   </div>
 
                   <div>
-                    <p className="text-sm font-semibold text-gray-600 mb-2">レシーブ:</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-semibold text-gray-600">レシーブ:</p>
+                      <button
+                        onClick={() => undoLastRecord(player.id, 'receive')}
+                        className="px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold"
+                      >
+                        ← 1つ戻る
+                      </button>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {receiveButtons.map((btn) => (
                         <button
