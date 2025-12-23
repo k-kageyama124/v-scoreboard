@@ -337,15 +337,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const getPlayerServeRecords = (playerId: string) => {
     if (!currentSet.serves) return [];
     return currentSet.serves
-      .filter(s => s.playerId === playerId)
-      .map(s => serveButtons.find(btn => btn.quality === s.quality)?.symbol || '?');
+      .filter(s => s.playerId === playerId);
   };
 
   const getPlayerReceiveRecords = (playerId: string) => {
     if (!currentSet.receives) return [];
     return currentSet.receives
-      .filter(r => r.playerId === playerId)
-      .map(r => receiveButtons.find(btn => btn.quality === r.quality)?.symbol || '?');
+      .filter(r => r.playerId === playerId);
   };
 
   if (!currentSet || !currentSet.players || currentSet.players.length === 0) {
@@ -543,14 +541,32 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-700 w-8">S:</span>
-                        <div className="flex-1 min-h-[2rem] p-2 bg-white rounded border border-gray-300">
-                          {serveRecords.join(' ')}
+                        <div className="flex-1 min-h-[2rem] p-2 bg-white rounded border border-gray-300 flex flex-wrap gap-1">
+                          {serveRecords.map((record, idx) => {
+                            const btn = serveButtons.find(b => b.quality === record.quality);
+                            const isRedStar = record.quality === 'red-star';
+                            return (
+                              <span
+                                key={idx}
+                                className={isRedStar ? 'text-red-600 font-bold' : ''}
+                              >
+                                {btn?.symbol || '?'}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-700 w-8">R:</span>
                         <div className="flex-1 min-h-[2rem] p-2 bg-white rounded border border-gray-300">
-                          {receiveRecords.join(' ')}
+                          {receiveRecords.map((record, idx) => {
+                            const btn = receiveButtons.find(b => b.quality === record.quality);
+                            return (
+                              <span key={idx}>
+                                {btn?.symbol || '?'}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
