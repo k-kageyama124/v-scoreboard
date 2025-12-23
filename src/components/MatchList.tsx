@@ -84,9 +84,22 @@ export default function MatchList({ matches, onSelectMatch, onDeleteMatch }: Mat
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-purple-600 transition-colors">
-                      {match.tournamentName || '大会名未設定'}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors">
+                        {match.tournamentName || '大会名未設定'}
+                      </h3>
+                      {match.result && (
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-bold ${
+                            match.result === 'win'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-red-600 text-white'
+                          }`}
+                        >
+                          {match.result === 'win' ? 'WIN' : 'LOSE'}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 text-gray-600 mb-1">
                       <Users size={16} />
                       <span className="text-sm">vs {match.opponent || '対戦相手未設定'}</span>
@@ -120,20 +133,6 @@ export default function MatchList({ matches, onSelectMatch, onDeleteMatch }: Mat
                     <div className="text-3xl font-bold text-red-600">{opponentScore}</div>
                   </div>
                 </div>
-
-                {match.result && (
-                  <div className="mt-4 text-center">
-                    <span
-                      className={`inline-block px-4 py-1 rounded-full text-sm font-bold ${
-                        match.result === 'win'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {match.result === 'win' ? '勝利' : '敗北'}
-                    </span>
-                  </div>
-                )}
               </div>
             );
           })}
