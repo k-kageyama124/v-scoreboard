@@ -97,6 +97,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     onUpdate(updatedMatch);
   };
 
+  const updateResult = (result: 'win' | 'lose') => {
+    const updatedMatch = { ...match };
+    updatedMatch.result = result;
+    onUpdate(updatedMatch);
+    console.log('✅ 勝敗更新:', result === 'win' ? 'WIN' : 'LOSE');
+  };
+
   const addRecord = (playerId: string, type: 'serve' | 'receive', quality: ServeQuality | ReceiveQuality) => {
     console.log('🔵 addRecord called:', { playerId, type, quality });
     
@@ -425,6 +432,31 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* 勝敗選択 */}
+              <div className="flex justify-center items-center gap-4 pt-4 border-t-2 border-purple-300">
+                <span className="text-lg font-semibold text-gray-700">勝敗:</span>
+                <button
+                  onClick={() => updateResult('win')}
+                  className={`px-8 py-3 rounded-lg font-bold text-lg transition-all ${
+                    match.result === 'win'
+                      ? 'bg-green-600 text-white shadow-lg'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  WIN
+                </button>
+                <button
+                  onClick={() => updateResult('lose')}
+                  className={`px-8 py-3 rounded-lg font-bold text-lg transition-all ${
+                    match.result === 'lose'
+                      ? 'bg-red-600 text-white shadow-lg'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  LOSE
+                </button>
               </div>
             </div>
           </div>
