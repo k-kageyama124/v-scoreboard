@@ -213,11 +213,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       
       currentSetData.players.push(newPlayer);
       
-      // 交代記録を追加
+      // 交代記録を追加（スコアも記録）
       currentSetData.substitutions.push({
         outPlayer: outPlayerName,
         inPlayer: inPlayerName.trim(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        ourScore: currentSetData.ourScore,
+        opponentScore: currentSetData.opponentScore
       });
 
       onUpdate(updatedMatch);
@@ -329,16 +331,47 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   };
 
   const saveAsImage = async () => {
-    const element = document.getElementById('match-detail-capture');
-    if (!element) return;
-
     try {
-      const canvas = await html2canvas(element, {
+      // スコア表示、選手統計、交代履歴を含むコンテナを作成
+      const scoreElement = document.getElementById('score-display');
+      const statsElement = document.getElementById('player-stats');
+      const substitutionElement = document.getElementById('substitution-history');
+      
+      if (!scoreElement || !statsElement) {
+        alert('保存する要素が見つかりません');
+        return;
+      }
+
+      // 一時的なコンテナを作成
+      const tempContainer = document.createElement('div');
+      tempContainer.style.padding = '20px';
+      tempContainer.style.backgroundColor = '#ffffff';
+      tempContainer.style.width = '1200px';
+      
+      // 要素をクローンして追加
+      tempContainer.appendChild(scoreElement.cloneNode(true));
+      tempContainer.appendChild(document.createElement('div')).style.height = '20px'; // スペーサー
+      tempContainer.appendChild(statsElement.cloneNode(true));
+      
+      if (substitutionElement) {
+        tempContainer.appendChild(document.createElement('div')).style.height = '20px';
+        tempContainer.appendChild(substitutionElement.cloneNode(true));
+      }
+      
+      // 一時的にドキュメントに追加
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      document.body.appendChild(tempContainer);
+
+      const canvas = await html2canvas(tempContainer, {
         backgroundColor: '#ffffff',
         scale: 2,
         logging: false,
         useCORS: true
       });
+
+      // 一時コンテナを削除
+      document.body.removeChild(tempContainer);
 
       canvas.toBlob((blob) => {
         if (blob) {
@@ -419,7 +452,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         </div>
 
         <div id="match-detail-capture" className="bg-white rounded-2xl shadow-xl p-8 space-y-8">
-          <div className="border-4 border-purple-600 rounded-xl p-6 bg-gradient-to-r from-purple-50 to-blue-50">
+          <div id="score-display" className="border-4 border-purple-600 rounded-xl p-6 bg-gradient-to-r from-purple-50 to-blue-50">
             <div className="space-y-4">
               <div className="text-center space-y-2 pb-4 border-b-2 border-purple-300">
                 <h2 className="text-3xl font-bold text-purple-800">{match.tournamentName}</h2>
@@ -664,7 +697,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           </div>
 
           {currentSet.substitutions && currentSet.substitutions.length > 0 && (
-            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6" id="substitution-history">
               <h3 className="text-xl font-bold text-gray-800 mb-4">交代履歴</h3>
               <div className="space-y-2">
                 {currentSet.substitutions.map((sub, idx) => (
@@ -672,6 +705,11 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     <span className="font-semibold">{sub.outPlayer}</span>
                     <span className="text-gray-500">→</span>
                     <span className="font-semibold text-green-600">{sub.inPlayer}</span>
+                    {(sub.ourScore !== undefined && sub.opponentScore !== undefined) && (
+                      <span className="ml-2 text-sm text-gray-600">
+                        (スコア: {sub.ourScore}-{sub.opponentScore})
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -722,7 +760,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div id="player-stats" className="space-y-4">
             <h3 className="text-2xl font-bold text-gray-800">選手統計（全セット）</h3>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
