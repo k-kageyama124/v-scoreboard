@@ -149,15 +149,21 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     }
 
     // IDで選手を検索
-    const benchPlayerIndex = currentSetData.players.findIndex(
+    const benchPlayer = currentSetData.players.find(
       (p) => p.id === benchPlayerId
     );
 
-    if (benchPlayerIndex !== -1) {
-      const outPlayerName = currentSetData.players[benchPlayerIndex].name || '(未入力)';
+    if (benchPlayer) {
+      const outPlayerName = benchPlayer.name || '(未入力)';
       
-      // 選手名を更新
-      currentSetData.players[benchPlayerIndex].name = inPlayerName.trim();
+      // 新しい選手を追加（既存の選手は残す）
+      const newPlayer: Player = {
+        id: `player-${Date.now()}`,
+        name: inPlayerName.trim(),
+        number: currentSetData.players.length + 1
+      };
+      
+      currentSetData.players.push(newPlayer);
       
       // 交代記録を追加
       currentSetData.substitutions.push({
@@ -170,7 +176,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       setBenchPlayerId('');
       setInPlayerName('');
       
-      console.log('✅ 選手交代成功:', outPlayerName, '→', inPlayerName.trim());
+      console.log('✅ 選手交代成功:', outPlayerName, 'OUT →', inPlayerName.trim(), 'IN（選手追加）');
     } else {
       alert('交代する選手が見つかりません');
       console.error('❌ 選手が見つかりません。ID:', benchPlayerId);
