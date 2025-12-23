@@ -35,6 +35,8 @@ export interface SubstitutionRecord {
   outPlayer: string;
   inPlayer: string;
   timestamp: number;
+  ourScore?: number;
+  opponentScore?: number;
 }
 
 export interface MatchSet {
