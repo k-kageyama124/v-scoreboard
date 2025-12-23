@@ -204,7 +204,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     if (benchPlayer) {
       const outPlayerName = benchPlayer.name || '(未入力)';
       
-      // 新しい選手を追加（既存の選手は残す）
+      // 新しい選手を追加(既存の選手は残す)
       const newPlayer: Player = {
         id: `player-${Date.now()}`,
         name: inPlayerName.trim(),
@@ -213,7 +213,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       
       currentSetData.players.push(newPlayer);
       
-      // 交代記録を追加（スコアも記録）
+      // 交代記録を追加(スコアも記録)
       currentSetData.substitutions.push({
         outPlayer: outPlayerName,
         inPlayer: inPlayerName.trim(),
@@ -422,83 +422,86 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
   if (!currentSet || !currentSet.players || currentSet.players.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">データ読み込み中...</h2>
-          <p className="text-gray-600">選手データを準備しています。しばらくお待ちください。</p>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">データ読み込み中...</h2>
+          <p className="text-base text-gray-600">選手データを準備しています。しばらくお待ちください。</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-3 md:p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        {/* ヘッダーボタン */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4 md:mb-6">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-base font-semibold"
           >
             <ArrowLeft size={20} />
             <span>試合一覧に戻る</span>
           </button>
           <button
             onClick={saveAsImage}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-shadow"
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-shadow text-base font-semibold"
           >
             <Save size={20} />
             <span>画像として保存</span>
           </button>
         </div>
 
-        <div id="match-detail-capture" className="bg-white rounded-2xl shadow-xl p-8 space-y-8">
-          <div id="score-display" className="border-4 border-purple-600 rounded-xl p-6 bg-gradient-to-r from-purple-50 to-blue-50">
+        <div id="match-detail-capture" className="bg-white rounded-2xl shadow-xl p-4 md:p-8 space-y-6 md:space-y-8">
+          {/* スコア表示エリア */}
+          <div id="score-display" className="border-4 border-purple-600 rounded-xl p-4 md:p-6 bg-gradient-to-r from-purple-50 to-blue-50">
             <div className="space-y-4">
               <div className="text-center space-y-2 pb-4 border-b-2 border-purple-300">
-                <h2 className="text-3xl font-bold text-purple-800">{match.tournamentName}</h2>
-                <p className="text-xl text-gray-700">vs {match.opponent}</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-purple-800">{match.tournamentName}</h2>
+                <p className="text-lg md:text-xl text-gray-700">vs {match.opponent}</p>
                 <p className="text-sm text-gray-600">{match.date}</p>
               </div>
 
-              <div className="flex justify-center items-center gap-8">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">自チーム</p>
-                  <div className="flex items-center gap-4">
+              {/* スコア入力（モバイル最適化） */}
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8">
+                <div className="text-center w-full sm:w-auto">
+                  <p className="text-sm md:text-base text-gray-600 mb-2">自チーム</p>
+                  <div className="flex items-center justify-center gap-3">
                     <button
                       onClick={() => updateScore('ourScore', currentSet.ourScore - 1)}
-                      className="w-10 h-10 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold text-xl"
+                      className="w-14 h-14 md:w-12 md:h-12 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold text-xl active:scale-95 transition-transform"
                     >
                       -1
                     </button>
-                    <div className="w-24 h-16 bg-white border-4 border-purple-500 rounded-lg flex items-center justify-center">
-                      <span className="text-4xl font-bold text-purple-700">{currentSet.ourScore}</span>
+                    <div className="w-28 h-20 md:w-24 md:h-16 bg-white border-4 border-purple-500 rounded-lg flex items-center justify-center">
+                      <span className="text-5xl md:text-4xl font-bold text-purple-700">{currentSet.ourScore}</span>
                     </div>
                     <button
                       onClick={() => updateScore('ourScore', currentSet.ourScore + 1)}
-                      className="w-10 h-10 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold text-xl"
+                      className="w-14 h-14 md:w-12 md:h-12 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold text-xl active:scale-95 transition-transform"
                     >
                       +1
                     </button>
                   </div>
                 </div>
 
-                <div className="text-4xl font-bold text-gray-400">-</div>
+                <div className="text-3xl md:text-4xl font-bold text-gray-400">-</div>
 
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">相手</p>
-                  <div className="flex items-center gap-4">
+                <div className="text-center w-full sm:w-auto">
+                  <p className="text-sm md:text-base text-gray-600 mb-2">相手</p>
+                  <div className="flex items-center justify-center gap-3">
                     <button
                       onClick={() => updateScore('opponentScore', currentSet.opponentScore - 1)}
-                      className="w-10 h-10 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold text-xl"
+                      className="w-14 h-14 md:w-12 md:h-12 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold text-xl active:scale-95 transition-transform"
                     >
                       -1
                     </button>
-                    <div className="w-24 h-16 bg-white border-4 border-blue-500 rounded-lg flex items-center justify-center">
-                      <span className="text-4xl font-bold text-blue-700">{currentSet.opponentScore}</span>
+                    <div className="w-28 h-20 md:w-24 md:h-16 bg-white border-4 border-blue-500 rounded-lg flex items-center justify-center">
+                      <span className="text-5xl md:text-4xl font-bold text-blue-700">{currentSet.opponentScore}</span>
                     </div>
                     <button
                       onClick={() => updateScore('opponentScore', currentSet.opponentScore + 1)}
-                      className="w-10 h-10 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold text-xl"
+                      className="w-14 h-14 md:w-12 md:h-12 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold text-xl active:scale-95 transition-transform"
                     >
                       +1
                     </button>
@@ -506,39 +509,42 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                 </div>
               </div>
 
-              {/* 勝敗選択 */}
-              <div className="flex justify-center items-center gap-4 pt-4 border-t-2 border-purple-300">
-                <span className="text-lg font-semibold text-gray-700">勝敗:</span>
-                <button
-                  onClick={() => updateResult('win')}
-                  className={`px-8 py-3 rounded-lg font-bold text-lg transition-all ${
-                    match.result === 'win'
-                      ? 'bg-green-600 text-white shadow-lg'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  WIN
-                </button>
-                <button
-                  onClick={() => updateResult('lose')}
-                  className={`px-8 py-3 rounded-lg font-bold text-lg transition-all ${
-                    match.result === 'lose'
-                      ? 'bg-red-600 text-white shadow-lg'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  LOSE
-                </button>
+              {/* 勝敗選択（モバイル最適化） */}
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-3 pt-4 border-t-2 border-purple-300">
+                <span className="text-base md:text-lg font-semibold text-gray-700">勝敗:</span>
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => updateResult('win')}
+                    className={`flex-1 sm:flex-none px-10 py-4 rounded-lg font-bold text-lg transition-all active:scale-95 ${
+                      match.result === 'win'
+                        ? 'bg-green-600 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    WIN
+                  </button>
+                  <button
+                    onClick={() => updateResult('lose')}
+                    className={`flex-1 sm:flex-none px-10 py-4 rounded-lg font-bold text-lg transition-all active:scale-95 ${
+                      match.result === 'lose'
+                        ? 'bg-red-600 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    LOSE
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-2 justify-center">
+          {/* セット切替ボタン（モバイル最適化） */}
+          <div className="flex flex-wrap gap-2 justify-center">
             {[0, 1, 2, 3, 4].map((index) => (
               <button
                 key={index}
                 onClick={() => handleSetChange(index)}
-                className={`px-6 py-3 rounded-lg font-bold transition-all ${
+                className={`px-5 py-3 md:px-6 md:py-3 rounded-lg font-bold transition-all active:scale-95 text-base ${
                   currentSetIndex === index
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -549,8 +555,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             ))}
           </div>
 
-          <div className="space-y-6">
-            <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          {/* 選手記録エリア（モバイル最適化） */}
+          <div className="space-y-4 md:space-y-6">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
               <Users size={24} />
               選手記録
             </h3>
@@ -562,9 +569,10 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
               return (
                 <div key={player.id} className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+                  {/* 選手名エリア */}
                   <div className="mb-4 pb-3 border-b-2 border-gray-300">
                     {isEditing ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         <input
                           type="text"
                           value={editingPlayerName}
@@ -576,33 +584,35 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                               cancelEditingPlayer();
                             }
                           }}
-                          className="flex-1 px-3 py-2 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                          className="flex-1 px-4 py-3 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-base"
                           placeholder="選手名を入力"
                           autoFocus
                         />
-                        <button
-                          onClick={() => savePlayerName(player.id)}
-                          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
-                        >
-                          保存
-                        </button>
-                        <button
-                          onClick={cancelEditingPlayer}
-                          className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold"
-                        >
-                          キャンセル
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => savePlayerName(player.id)}
+                            className="flex-1 sm:flex-none px-5 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold active:scale-95 transition-transform"
+                          >
+                            保存
+                          </button>
+                          <button
+                            onClick={cancelEditingPlayer}
+                            className="flex-1 sm:flex-none px-5 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold active:scale-95 transition-transform"
+                          >
+                            キャンセル
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                         <div className="flex-1">
-                          <span className="text-xl font-bold text-gray-800">
+                          <span className="text-lg md:text-xl font-bold text-gray-800">
                             選手: {player.name || '(未入力)'}
                           </span>
                         </div>
                         <button
                           onClick={() => startEditingPlayer(player)}
-                          className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+                          className="flex items-center gap-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm active:scale-95 transition-transform"
                         >
                           <Edit2 size={14} />
                           編集
@@ -611,47 +621,47 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     )}
                   </div>
 
-                  <div className="grid grid-cols-[1fr_2fr] gap-4 mb-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-700 w-8">S:</span>
-                        <div className="flex-1 min-h-[2rem] p-2 bg-white rounded border border-gray-300 flex flex-wrap gap-1">
-                          {serveRecords.map((record, idx) => {
-                            const btn = serveButtons.find(b => b.quality === record.quality);
-                            const isRedStar = record.quality === 'red-star';
-                            return (
-                              <span
-                                key={idx}
-                                className={isRedStar ? 'text-red-600 font-bold' : ''}
-                              >
-                                {btn?.symbol || '?'}
-                              </span>
-                            );
-                          })}
-                        </div>
+                  {/* 記録表示エリア */}
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-gray-700 text-base mt-2">S:</span>
+                      <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 flex flex-wrap gap-1 text-lg">
+                        {serveRecords.map((record, idx) => {
+                          const btn = serveButtons.find(b => b.quality === record.quality);
+                          const isRedStar = record.quality === 'red-star';
+                          return (
+                            <span
+                              key={idx}
+                              className={isRedStar ? 'text-red-600 font-bold' : ''}
+                            >
+                              {btn?.symbol || '?'}
+                            </span>
+                          );
+                        })}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-700 w-8">R:</span>
-                        <div className="flex-1 min-h-[2rem] p-2 bg-white rounded border border-gray-300">
-                          {receiveRecords.map((record, idx) => {
-                            const btn = receiveButtons.find(b => b.quality === record.quality);
-                            return (
-                              <span key={idx}>
-                                {btn?.symbol || '?'}
-                              </span>
-                            );
-                          })}
-                        </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-gray-700 text-base mt-2">R:</span>
+                      <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 flex flex-wrap gap-1 text-lg">
+                        {receiveRecords.map((record, idx) => {
+                          const btn = receiveButtons.find(b => b.quality === record.quality);
+                          return (
+                            <span key={idx}>
+                              {btn?.symbol || '?'}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
 
-                  <div className="mb-3">
+                  {/* サーブボタンエリア（モバイル最適化） */}
+                  <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-semibold text-gray-600">サーブ:</p>
+                      <p className="text-base font-semibold text-gray-600">サーブ:</p>
                       <button
                         onClick={() => undoLastRecord(player.id, 'serve')}
-                        className="px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold"
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold active:scale-95"
                       >
                         ← 1つ戻る
                       </button>
@@ -661,7 +671,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                         <button
                           key={btn.quality}
                           onClick={() => addRecord(player.id, 'serve', btn.quality)}
-                          className={`${btn.color} text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity font-bold`}
+                          className={`${btn.color} text-white px-6 py-3 rounded-lg hover:opacity-80 transition-opacity font-bold text-lg active:scale-95 min-w-[3.5rem]`}
                         >
                           {btn.symbol}
                         </button>
@@ -669,12 +679,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     </div>
                   </div>
 
+                  {/* レシーブボタンエリア（モバイル最適化） */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-semibold text-gray-600">レシーブ:</p>
+                      <p className="text-base font-semibold text-gray-600">レシーブ:</p>
                       <button
                         onClick={() => undoLastRecord(player.id, 'receive')}
-                        className="px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold"
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold active:scale-95"
                       >
                         ← 1つ戻る
                       </button>
@@ -684,7 +695,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                         <button
                           key={btn.quality}
                           onClick={() => addRecord(player.id, 'receive', btn.quality)}
-                          className={`${btn.color} text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity font-bold`}
+                          className={`${btn.color} text-white px-6 py-3 rounded-lg hover:opacity-80 transition-opacity font-bold text-lg active:scale-95 min-w-[3.5rem]`}
                         >
                           {btn.symbol}
                         </button>
@@ -696,17 +707,18 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             })}
           </div>
 
+          {/* 交代履歴 */}
           {currentSet.substitutions && currentSet.substitutions.length > 0 && (
-            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6" id="substitution-history">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">交代履歴</h3>
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 md:p-6" id="substitution-history">
+              <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-4">交代履歴</h3>
               <div className="space-y-2">
                 {currentSet.substitutions.map((sub, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-gray-700">
+                  <div key={idx} className="flex flex-wrap items-center gap-2 text-gray-700 text-base">
                     <span className="font-semibold">{sub.outPlayer}</span>
                     <span className="text-gray-500">→</span>
                     <span className="font-semibold text-green-600">{sub.inPlayer}</span>
                     {(sub.ourScore !== undefined && sub.opponentScore !== undefined) && (
-                      <span className="ml-2 text-sm text-gray-600">
+                      <span className="text-sm text-gray-600">
                         (スコア: {sub.ourScore}-{sub.opponentScore})
                       </span>
                     )}
@@ -716,20 +728,21 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           )}
 
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+          {/* 選手交代エリア（モバイル最適化） */}
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 md:p-6">
+            <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <UserPlus size={24} />
               選手交代
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-base font-semibold text-gray-700 mb-2">
                   交代する選手
                 </label>
                 <select
                   value={benchPlayerId}
                   onChange={(e) => setBenchPlayerId(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 >
                   <option value="">選手を選択してください</option>
                   {currentSet.players.map((player) => (
@@ -740,71 +753,72 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-base font-semibold text-gray-700 mb-2">
                   入る選手
                 </label>
                 <input
                   type="text"
                   value={inPlayerName}
                   onChange={(e) => setInPlayerName(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   placeholder="選手名を入力"
                 />
               </div>
             </div>
             <button
               onClick={handleSubstitution}
-              className="mt-4 w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow font-bold"
+              className="mt-4 w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow font-bold text-base active:scale-[0.98]"
             >
               交代を記録
             </button>
           </div>
 
+          {/* 選手統計テーブル（スクロール対応） */}
           <div id="player-stats" className="space-y-4">
-            <h3 className="text-2xl font-bold text-gray-800">選手統計（全セット）</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-800">選手統計（全セット）</h3>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <table className="w-full border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-                    <th className="border-2 border-purple-700 px-4 py-3 text-left">選手名</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S合計</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R合計</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S×</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S○</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S◎</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S△</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S★(赤)</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S★(黒)</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">S━</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R×</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R○</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R◎</th>
-                    <th className="border-2 border-purple-700 px-4 py-3 text-center">R△</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-left text-sm md:text-base sticky left-0 bg-purple-600">選手名</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S合計</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R合計</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S×</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S○</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S◎</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S△</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S★(赤)</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S★(黒)</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S━</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R×</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R○</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R◎</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R△</th>
                   </tr>
                 </thead>
                 <tbody>
                   {aggregatedData.map((player, idx) => (
                     <tr key={player.id} className={idx % 2 === 0 ? 'bg-purple-50' : 'bg-white'}>
-                      <td className="border-2 border-gray-300 px-4 py-2 font-semibold">
+                      <td className="border-2 border-gray-300 px-3 py-2 font-semibold text-sm md:text-base sticky left-0 bg-inherit">
                         {player.name || '(未入力)'}
                       </td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center font-bold text-blue-600">
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center font-bold text-blue-600 text-sm md:text-base">
                         {player.totalServes}
                       </td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center font-bold text-green-600">
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center font-bold text-green-600 text-sm md:text-base">
                         {player.totalReceives}
                       </td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['serve-miss']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['setter-move']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['setter-pinpoint']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['other-than-setter']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['red-star']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['black-star']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.serveDetails['dash']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.receiveDetails['setter-return']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.receiveDetails['no-return']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.receiveDetails['setter-pinpoint']}</td>
-                      <td className="border-2 border-gray-300 px-4 py-2 text-center">{player.receiveDetails['other-than-setter']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['serve-miss']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['setter-move']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['setter-pinpoint']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['other-than-setter']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['red-star']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['black-star']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['dash']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['setter-return']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['no-return']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['setter-pinpoint']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['other-than-setter']}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -812,11 +826,12 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
           </div>
 
-          <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">記号の意味</h3>
-            <div className="grid grid-cols-2 gap-4">
+          {/* 記号の意味 */}
+          <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-4 md:p-6">
+            <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-4">記号の意味</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="font-semibold text-gray-700 mb-2">サーブ:</p>
+                <p className="font-semibold text-gray-700 mb-2 text-base">サーブ:</p>
                 <ul className="space-y-1 text-sm text-gray-600">
                   <li>× = ミス</li>
                   <li>○ = セッターが動いた</li>
@@ -828,7 +843,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                 </ul>
               </div>
               <div>
-                <p className="font-semibold text-gray-700 mb-2">レシーブ:</p>
+                <p className="font-semibold text-gray-700 mb-2 text-base">レシーブ:</p>
                 <ul className="space-y-1 text-sm text-gray-600">
                   <li>× = セッターに返らなかった</li>
                   <li>○ = セッターに返った(動いた)</li>
