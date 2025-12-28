@@ -168,8 +168,8 @@ export default function PlayerDetail({ playerName, matches, onBack }: PlayerDeta
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-700">× (ミス)</span>
-                    <span className="font-semibold">{totalStats.serves['serve-miss']}</span>
+                    <span className="text-gray-700">━ (サーブミス)</span>
+                    <span className="font-semibold">{totalStats.serves['serve-miss'] + totalStats.serves['dash']}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-700">○ (セッター動いた)</span>
@@ -190,10 +190,6 @@ export default function PlayerDetail({ playerName, matches, onBack }: PlayerDeta
                   <div className="flex justify-between">
                     <span className="text-gray-700">★ (黒)</span>
                     <span className="font-semibold">{totalStats.serves['black-star']}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">━ (ダッシュ)</span>
-                    <span className="font-semibold">{totalStats.serves['dash']}</span>
                   </div>
                 </div>
               </div>
@@ -257,13 +253,12 @@ export default function PlayerDetail({ playerName, matches, onBack }: PlayerDeta
                       <div className="bg-purple-50 rounded-lg p-3">
                         <p className="font-semibold text-purple-700 mb-2">サーブ: {matchServes}回</p>
                         <div className="grid grid-cols-2 gap-1 text-xs">
-                          <div>× {perf.serves['serve-miss']}</div>
+                          <div>━ {perf.serves['serve-miss'] + perf.serves['dash']}</div>
                           <div>○ {perf.serves['setter-move']}</div>
                           <div>◎ {perf.serves['setter-pinpoint']}</div>
                           <div>△ {perf.serves['other-than-setter']}</div>
                           <div className="text-red-600">★赤 {perf.serves['red-star']}</div>
                           <div>★黒 {perf.serves['black-star']}</div>
-                          <div>━ {perf.serves['dash']}</div>
                         </div>
                       </div>
                       
@@ -287,4 +282,3 @@ export default function PlayerDetail({ playerName, matches, onBack }: PlayerDeta
     </div>
   );
 }
-  
