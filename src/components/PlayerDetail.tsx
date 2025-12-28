@@ -184,11 +184,11 @@ export default function PlayerDetail({ playerName, matches, onBack }: PlayerDeta
                     <span className="font-semibold">{totalStats.serves['other-than-setter']}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-700">★ (赤)</span>
+                    <span className="text-gray-700">★ (赤) = ノータッチエース&相手が弾いた</span>
                     <span className="font-semibold text-red-600">{totalStats.serves['red-star']}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-700">★ (黒)</span>
+                    <span className="text-gray-700">★ (黒) = 取られたけど繋がらない</span>
                     <span className="font-semibold">{totalStats.serves['black-star']}</span>
                   </div>
                 </div>
