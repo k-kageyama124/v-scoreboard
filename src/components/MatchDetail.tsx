@@ -840,10 +840,10 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               <div>
                 <p className="font-semibold text-gray-700 mb-2 text-base">レシーブ:</p>
                 <ul className="space-y-1 text-sm text-gray-600">
-                  <li>× = セッターに返らなかった</li>
-                  <li>○ = セッターに返った(動いた)</li>
+                  <li>× = レシーブミス</li>
+                  <li>○ = セッター以外が返した</li>
                   <li>◎ = セッターにピンポイント</li>
-                  <li>△ = セッター以外が返した</li>
+                  <li>△ = 拾ったけど繋げられなかった</li>
                 </ul>
               </div>
             </div>
