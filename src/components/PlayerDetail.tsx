@@ -205,11 +205,11 @@ export default function PlayerDetail({ playerName, matches, onBack }: PlayerDeta
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-700">× (返らなかった)</span>
+                    <span className="text-gray-700">× (レシーブミス)</span>
                     <span className="font-semibold">{totalStats.receives['setter-return']}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-700">○ (セッター返った)</span>
+                    <span className="text-gray-700">○ (セッター以外が返した)</span>
                     <span className="font-semibold">{totalStats.receives['no-return']}</span>
                   </div>
                   <div className="flex justify-between">
@@ -217,7 +217,7 @@ export default function PlayerDetail({ playerName, matches, onBack }: PlayerDeta
                     <span className="font-semibold">{totalStats.receives['setter-pinpoint']}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-700">△ (セッター以外)</span>
+                    <span className="text-gray-700">△ (拾ったけど繋げられなかった)</span>
                     <span className="font-semibold">{totalStats.receives['other-than-setter']}</span>
                   </div>
                 </div>
