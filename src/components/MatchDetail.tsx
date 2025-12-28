@@ -833,8 +833,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                   <li>○ = セッターが動いた</li>
                   <li>◎ = セッターにピンポイント</li>
                   <li>△ = セッター以外が返した</li>
-                  <li>★(赤) = 赤い星</li>
-                  <li>★(黒) = 黒い星</li>
+                  <li>★(赤) = ノータッチエース&相手が弾いた</li>
+                  <li>★(黒) = 取られたけど繋がらない</li>
                 </ul>
               </div>
               <div>
