@@ -66,6 +66,23 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingPlayerName, setEditingPlayerName] = useState('');
 
+  // サーブ巡目管理用のstate (選手IDをキーに、巡目を保持)
+  const [serveRotations, setServeRotations] = useState<Record<string, number>>({});
+
+  // サーブ巡目を切り替える関数
+  const toggleServeRotation = (playerId: string) => {
+    setServeRotations(prev => {
+      const current = prev[playerId] || 1;
+      const next = current === 3 ? 1 : current + 1;
+      return { ...prev, [playerId]: next };
+    });
+  };
+
+  // 選手のサーブ巡目を取得（デフォルト: 1）
+  const getServeRotation = (playerId: string) => {
+    return serveRotations[playerId] || 1;
+  };
+
   const handleSetChange = (index: number) => {
     setCurrentSetIndex(index);
     
@@ -204,7 +221,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     if (benchPlayer) {
       const outPlayerName = benchPlayer.name || '(未入力)';
       
-      // 新しい選手を追加(既存の選手は残す)
+      // 新しい選手を追加（既存の選手は残す）
       const newPlayer: Player = {
         id: `player-${Date.now()}`,
         name: inPlayerName.trim(),
@@ -213,7 +230,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       
       currentSetData.players.push(newPlayer);
       
-      // 交代記録を追加(スコアも記録)
+      // 交代記録を追加（スコアも記録）
       currentSetData.substitutions.push({
         outPlayer: outPlayerName,
         inPlayer: inPlayerName.trim(),
@@ -399,6 +416,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     { quality: 'red-star', symbol: '★', color: 'bg-red-600' },
     { quality: 'black-star', symbol: '★', color: 'bg-gray-600' }
   ];
+
   const receiveButtons: Array<{ quality: ReceiveQuality; symbol: string; color: string }> = [
     { quality: 'setter-return', symbol: '×', color: 'bg-gray-600' },
     { quality: 'no-return', symbol: '○', color: 'bg-gray-600' },
@@ -564,6 +582,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               const serveRecords = getPlayerServeRecords(player.id);
               const receiveRecords = getPlayerReceiveRecords(player.id);
               const isEditing = editingPlayerId === player.id;
+              const currentRotation = getServeRotation(player.id);
 
               return (
                 <div key={player.id} className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
@@ -653,10 +672,18 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     </div>
                   </div>
 
-                  {/* サーブボタンエリア（モバイル最適化） */}
+                  {/* サーブボタンエリア（モバイル最適化 + 巡目ボタン追加） */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-base font-semibold text-gray-600">サーブ:</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-base font-semibold text-gray-600">サーブ:</p>
+                        <button
+                          onClick={() => toggleServeRotation(player.id)}
+                          className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-bold active:scale-95"
+                        >
+                          {currentRotation}巡目
+                        </button>
+                      </div>
                       <button
                         onClick={() => undoLastRecord(player.id, 'serve')}
                         className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold active:scale-95"
@@ -853,4 +880,3 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     </div>
   );
 }
-                                                                                                                                                                                                                                                                                                                                   
