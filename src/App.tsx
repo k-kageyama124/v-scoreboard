@@ -140,13 +140,13 @@ function App() {
         />
       )}
 
-     {currentView === 'detail' && selectedMatch && (
-  <MatchDetail
-    match={selectedMatch}
-    onBack={() => setCurrentView('matches')}
-    onUpdate={updateMatch}
-  />
-)}
+      {currentView === 'detail' && selectedMatch && (
+        <MatchDetail
+          match={selectedMatch}
+          onBack={() => setCurrentView('matches')}
+          onUpdate={updateMatch}
+        />
+      )}
 
       {currentView === 'players' && (
         <PlayerStats
