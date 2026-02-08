@@ -69,7 +69,7 @@ export default function PlayerStats({ matches, onBack, onSelectPlayer }: PlayerS
             if (summary) {
               summary.totalReceives++;
               // レシーブ成功の定義: セッターに返った、ピンポイント
-              if (receive.quality === 'setter-return' || receive.quality === 'setter-pinpoint') {
+              if (receive.quality === 'no-return' || receive.quality === 'setter-pinpoint') {
                 summary.receiveSuccess++;
               }
             }
