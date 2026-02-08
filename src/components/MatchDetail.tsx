@@ -409,7 +409,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const aggregatedData = getAggregatedPlayerData();
 
   const serveButtons: Array<{ quality: ServeQuality; symbol: string; color: string }> = [
-    { quality: 'serve-miss', symbol: '━', color: 'bg-gray-600' },
+    { quality: 'serve-miss', symbol: '×', color: 'bg-gray-600' },
     { quality: 'setter-move', symbol: '○', color: 'bg-gray-600' },
     { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-gray-600' },
     { quality: 'other-than-setter', symbol: '△', color: 'bg-gray-600' },
@@ -856,7 +856,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               <div>
                 <p className="font-semibold text-gray-700 mb-2 text-base">サーブ:</p>
                 <ul className="space-y-1 text-sm text-gray-600">
-                  <li>━ = サーブミス</li>
+                  <li>× = サーブミス</li>
                   <li>○ = セッターが動いた</li>
                   <li>◎ = セッターにピンポイント</li>
                   <li>△ = セッター以外が返した</li>
@@ -867,10 +867,10 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               <div>
                 <p className="font-semibold text-gray-700 mb-2 text-base">レシーブ:</p>
                 <ul className="space-y-1 text-sm text-gray-600">
-                  <li>× = レシーブミス</li>
-                  <li>○ = セッター以外が返した</li>
-                  <li>◎ = セッターにピンポイント</li>
-                  <li>△ = 拾ったけど繋げられなかった</li>
+                  <li>◎ = セッター動かさず返球</li>
+                  <li>○ = セッター動いたけどセッターに返球</li>
+                  <li>△ = セッター以外が返球</li>
+                  <li>× = 返らず</li>
                 </ul>
               </div>
             </div>
