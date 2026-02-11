@@ -262,42 +262,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setInPlayerName('');
     setIsEditingSubstitution(false);
   };
-    }
 
-    if (!inPlayer) {
-      alert('INする選手が見つかりません');
-      return;
-    }
-
-    const updatedSets = [...match.sets];
-
-    // players は「登場した選手の名簿」として追加のみ
-    const exists = match.sets[currentSetIndex].players.some((p: Player) => p.id === inPlayer.id);
-    const updatedPlayers = exists ? match.sets[currentSetIndex].players : [...match.sets[currentSetIndex].players, inPlayer];
-
-    const updatedSubstitutions = [
-      ...(match.sets[currentSetIndex].substitutions || []),
-      {
-        outPlayer: outPlayer || { id: '', name: '', number: 0 },
-        inPlayer,
-        timestamp: Date.now(),
-        ourScore: match.sets[currentSetIndex].ourScore,
-        opponentScore: match.sets[currentSetIndex].opponentScore,
-      },
-    ];
-
-    updatedSets[currentSetIndex] = {
-      ...match.sets[currentSetIndex],
-      players: updatedPlayers,
-      substitutions: updatedSubstitutions,
-    };
-
-    onUpdate({ ...match, sets: updatedSets });
-
-    setBenchPlayerId('');
-    setInPlayerName('');
-    setIsEditingSubstitution(false);
-  };
 
   const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
