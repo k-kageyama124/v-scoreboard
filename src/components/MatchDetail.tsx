@@ -220,13 +220,14 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
     if (benchPlayer) {
       const outPlayerName = benchPlayer.name || '(未入力)';
-      
-      // 新しい選手を追加（既存の選手は残す）
+
       const newPlayer: Player = {
         id: `player-${Date.now()}`,
         name: inPlayerName.trim(),
         number: currentSetData.players.length + 1
-      };      // スマホ表は『先頭6=コート + 7人目以降=ベンチ羅列』のため、
+      };
+
+      // スマホ表は『先頭6=コート + 7人目以降=ベンチ羅列』
       // OUTが先頭6人ならその位置に差し替え、そうでなければ追加
       const outIndex = currentSetData.players.findIndex(p => p.id === benchPlayerId);
       if (outIndex !== -1 && outIndex < 6) {
@@ -234,20 +235,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       } else {
         currentSetData.players.push(newPlayer);
       }
-        if (outIndex !== -1 && outIndex < 6) {
-          base[outIndex] = newPlayer.id;
-        }
-        // 7枠目は常に「ベンチ扱い（7人目）」を表示
-        const benchPlayer = currentSetData.players[6];
-        if (benchPlayer) {
-          if (base.length < 7) {
-            while (base.length < 7) { base.push(''); }
-          }
-          base[6] = benchPlayer.id;
-        }
-        return base.slice(0, 7);
-      });
-      
+
       // 交代記録を追加（スコアも記録）
       currentSetData.substitutions.push({
         outPlayer: outPlayerName,
@@ -260,8 +248,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       onUpdate(updatedMatch);
       setBenchPlayerId('');
       setInPlayerName('');
-      
-      console.log('✅ 選手交代成功:', outPlayerName, 'OUT →', inPlayerName.trim(), 'IN（選手追加）');
+
+      console.log('✅ 選手交代成功:', outPlayerName, 'OUT →', inPlayerName.trim(), 'IN');
     } else {
       alert('交代する選手が見つかりません');
       console.error('❌ 選手が見つかりません。ID:', benchPlayerId);
