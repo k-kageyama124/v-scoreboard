@@ -429,10 +429,10 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   ];
 
   const receiveButtons: Array<{ quality: ReceiveQuality; symbol: string; color: string }> = [
-    { quality: 'setter-return', symbol: '×', color: 'bg-gray-600' },
-    { quality: 'no-return', symbol: '○', color: 'bg-gray-600' },
     { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-gray-600' },
-    { quality: 'other-than-setter', symbol: '△', color: 'bg-gray-600' }
+    { quality: 'no-return', symbol: '○', color: 'bg-gray-600' },
+    { quality: 'other-than-setter', symbol: '△', color: 'bg-gray-600' },
+    { quality: 'setter-return', symbol: '×', color: 'bg-gray-600' }
   ];
 
   const getPlayerServeRecords = (playerId: string) => {
