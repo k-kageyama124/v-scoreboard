@@ -299,7 +299,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setIsEditingSubstitution(false);
   };
 
-      const startEditingPlayer = (player: Player) => {
+  const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setEditingPlayerName(player.name);
   };
