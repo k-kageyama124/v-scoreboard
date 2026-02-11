@@ -126,7 +126,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     console.log('🔵 addRecord called:', { playerId, type, quality });
     
     const updatedMatch = { ...match };
-    const match.sets[currentSetIndex] = updatedMatch.sets[currentSetIndex];
+    const currentSetData = updatedMatch.sets[currentSetIndex];
 
     // 配列が存在しない場合は初期化
     if (!match.sets[currentSetIndex].serves) {
@@ -161,7 +161,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
   const undoLastRecord = (playerId: string, type: 'serve' | 'receive') => {
     const updatedMatch = { ...match };
-    const match.sets[currentSetIndex] = updatedMatch.sets[currentSetIndex];
+    const currentSetData = updatedMatch.sets[currentSetIndex];
 
     if (type === 'serve') {
       if (!match.sets[currentSetIndex].serves) return;
@@ -206,7 +206,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       return;
     }
 
-    const match.sets[currentSetIndex] = match.sets[currentSetIndex];
+    const currentSetData = match.sets[currentSetIndex];
     if (!match.sets[currentSetIndex]) return;
 
     // OUT は履歴用（players 配列の並びは一切変更しない）
