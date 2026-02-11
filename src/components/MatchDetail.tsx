@@ -242,8 +242,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     const updatedSubstitutions = [
       ...(currentSetData.substitutions || []),
       {
-        outPlayer: outPlayer || { id: '', name: '', number: 0 },
-        inPlayer,
+        outPlayer: outPlayer?.name || '',
+        inPlayer: inPlayer.name || '',
         timestamp: Date.now(),
         ourScore: currentSetData.ourScore,
         opponentScore: currentSetData.opponentScore,
