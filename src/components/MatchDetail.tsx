@@ -410,7 +410,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
   const serveButtons: Array<{ quality: ServeQuality; symbol: string; color: string }> = [
     { quality: 'serve-miss', symbol: '×', color: 'bg-gray-600' },
-    { quality: 'red-star', symbol: '★', color: 'bg-red-600' }
+    { quality: 'red-star', symbol: '★', color: 'bg-red-600' },
+    { quality: 'black-star', symbol: '★', color: 'bg-gray-700' }
   ];
 
   const receiveButtons: Array<{ quality: ReceiveQuality; symbol: string; color: string }> = [
@@ -723,7 +724,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     </div>
 
     <div className="mt-3 text-xs text-gray-600">
-      スマホは表入力のみ（サーブは × / ★(赤) の2ボタン）
+      スマホは表入力のみ（サーブは × / ★(赤) / ★(黒)）
     </div>
   </div>
 
