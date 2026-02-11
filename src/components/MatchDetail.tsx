@@ -283,11 +283,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       setInPlayerName('');
 
       console.log('✅ 選手交代成功:', outPlayerName, 'OUT →', inPlayerName.trim(), 'IN');
-    } else {
-      alert('交代する選手が見つかりません');
-      console.error('❌ 選手が見つかりません。ID:', benchPlayerId);
-    }
-  };
 
   const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
@@ -1077,4 +1072,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       </div>
     </div>
   );
-}
+};
+
+export default MatchDetail;
