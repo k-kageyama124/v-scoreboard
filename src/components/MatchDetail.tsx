@@ -200,32 +200,65 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   };
 
   const handleSubstitution = () => {
-    if (!benchPlayerId || !inPlayerName.trim()) {
-      alert('交代する選手と入る選手を入力してください');
+    if (!benchPlayerId && !inPlayerName.trim()) {
+      alert('ベンチの選手を選択するか、新しい選手名を入力してください');
       return;
     }
 
-    const updatedMatch = { ...match };
-    const currentSetData = updatedMatch.sets[currentSetIndex];
+    const currentSetData = match.sets[currentSet];
+    if (!currentSetData) return;
 
-    // 配列が存在しない場合は初期化
-    if (!currentSetData.substitutions) {
-      currentSetData.substitutions = [];
+    // OUT は履歴用（players 配列の並びは一切変更しない）
+    const outPlayer = currentSetData.players.find((p) => p.id === benchPlayerId) || null;
+
+    // IN 選手を決定（既存選手 or 新規追加）
+    let inPlayer = null;
+    if (benchPlayerId) {
+      inPlayer = currentSetData.players.find((p) => p.id === benchPlayerId) || null;
     }
 
-    // IDで選手を検索
-    const benchPlayer = currentSetData.players.find(
-      (p) => p.id === benchPlayerId
-    );
-
-    if (benchPlayer) {
-      const outPlayerName = benchPlayer.name || '(未入力)';
-
-      const newPlayer: Player = {
+    if (!inPlayer && inPlayerName.trim()) {
+      inPlayer = {
         id: `player-${Date.now()}`,
         name: inPlayerName.trim(),
-        number: currentSetData.players.length + 1
+        number: currentSetData.players.length + 1,
       };
+    }
+
+    if (!inPlayer) {
+      alert('INする選手が見つかりません');
+      return;
+    }
+
+    const updatedSets = [...match.sets];
+
+    // players は「登場した選手の名簿」として追加のみ
+    const exists = currentSetData.players.some((p) => p.id === inPlayer.id);
+    const updatedPlayers = exists ? currentSetData.players : [...currentSetData.players, inPlayer];
+
+    const updatedSubstitutions = [
+      ...(currentSetData.substitutions || []),
+      {
+        outPlayer: outPlayer || { id: '', name: '', number: 0 },
+        inPlayer,
+        timestamp: Date.now(),
+        ourScore: currentSetData.ourScore,
+        opponentScore: currentSetData.opponentScore,
+      },
+    ];
+
+    updatedSets[currentSet] = {
+      ...currentSetData,
+      players: updatedPlayers,
+      substitutions: updatedSubstitutions,
+    };
+
+    onUpdate({ ...match, sets: updatedSets });
+
+    setBenchPlayerId('');
+    setInPlayerName('');
+    setIsEditingSubstitution(false);
+  };
 
       // スマホ表は『先頭6=コート + 7人目以降=ベンチ羅列』
       // OUTが先頭6人ならその位置に差し替え、そうでなければ追加
@@ -603,6 +636,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             const renderServeSymbol = (q: any) => {
               const b = serveButtons.find(x => x.quality === q);
               if (!b) return '?';
+              if (b.quality === 'red-star') return <span className="text-red-600 font-bold">★</span>;
+              if (b.quality === 'black-star') return <span className="text-gray-800 font-bold">★</span>;
               return b.symbol;
             };
             const renderReceiveSymbol = (q: any) => {
@@ -677,7 +712,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
                 {/* レシーブ（4ボタン） */}
                 <td className="border-2 border-gray-300 px-2 py-2 align-top">
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {receiveButtons.map((btn) => (
                       <button
                         key={btn.quality}
@@ -714,11 +749,15 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                   <div className="text-xs text-gray-700 space-y-1">
                     <div className="flex items-start gap-2">
                       <span className="font-bold">S:</span>
-                      <span className="break-words">{serveRecords.slice(-10).map((r) => renderServeSymbol(r.quality)).join(' ')}</span>
+                      <span className="break-words">{serveRecords.slice(-10).map((r, i) => (
+                        <span key={i} className="mr-1">{renderServeSymbol(r.quality)}</span>
+                      ))}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="font-bold">R:</span>
-                      <span className="break-words">{receiveRecords.slice(-10).map((r) => renderReceiveSymbol(r.quality)).join(' ')}</span>
+                      <span className="break-words">{receiveRecords.slice(-10).map((r, i) => (
+                        <span key={i} className="mr-1">{renderReceiveSymbol(r.quality)}</span>
+                      ))}</span>
                     </div>
                   </div>
                 </td>
