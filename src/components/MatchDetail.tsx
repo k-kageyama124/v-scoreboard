@@ -314,7 +314,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
     const updatedMatch = { ...match };
     
-    .sets.forEach(set => {
+    updatedMatch.sets.forEach(set => {
       const playerIndex = set.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
         set.players[playerIndex].name = trimmedName;
@@ -1087,4 +1087,4 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       </div>
     </div>
   );
-};
+}
