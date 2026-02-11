@@ -60,6 +60,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
   // 選手交代用のstate (IDで管理)
   const [benchPlayerId, setBenchPlayerId] = useState('');
+  const [isEditingSubstitution, setIsEditingSubstitution] = useState(false);
   const [inPlayerName, setInPlayerName] = useState('');
   
   // 選手名編集用のstate
@@ -125,33 +126,33 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     console.log('🔵 addRecord called:', { playerId, type, quality });
     
     const updatedMatch = { ...match };
-    const currentSetData = updatedMatch.sets[currentSetIndex];
+    const match.sets[currentSetIndex] = updatedMatch.sets[currentSetIndex];
 
     // 配列が存在しない場合は初期化
-    if (!currentSetData.serves) {
-      currentSetData.serves = [];
+    if (!match.sets[currentSetIndex].serves) {
+      match.sets[currentSetIndex].serves = [];
     }
-    if (!currentSetData.receives) {
-      currentSetData.receives = [];
+    if (!match.sets[currentSetIndex].receives) {
+      match.sets[currentSetIndex].receives = [];
     }
-    if (!currentSetData.substitutions) {
-      currentSetData.substitutions = [];
+    if (!match.sets[currentSetIndex].substitutions) {
+      match.sets[currentSetIndex].substitutions = [];
     }
 
     if (type === 'serve') {
-      currentSetData.serves.push({
+      match.sets[currentSetIndex].serves.push({
         playerId,
         quality: quality as ServeQuality,
         timestamp: Date.now()
       });
-      console.log('✅ Serve added:', currentSetData.serves.length);
+      console.log('✅ Serve added:', match.sets[currentSetIndex].serves.length);
     } else {
-      currentSetData.receives.push({
+      match.sets[currentSetIndex].receives.push({
         playerId,
         quality: quality as ReceiveQuality,
         timestamp: Date.now()
       });
-      console.log('✅ Receive added:', currentSetData.receives.length);
+      console.log('✅ Receive added:', match.sets[currentSetIndex].receives.length);
     }
 
     console.log('🔄 Calling onUpdate...');
@@ -160,37 +161,37 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
   const undoLastRecord = (playerId: string, type: 'serve' | 'receive') => {
     const updatedMatch = { ...match };
-    const currentSetData = updatedMatch.sets[currentSetIndex];
+    const match.sets[currentSetIndex] = updatedMatch.sets[currentSetIndex];
 
     if (type === 'serve') {
-      if (!currentSetData.serves) return;
+      if (!match.sets[currentSetIndex].serves) return;
       
       // 指定した選手のサーブ記録を取得
-      const playerServeIndices = currentSetData.serves
+      const playerServeIndices = match.sets[currentSetIndex].serves
         .map((s, idx) => s.playerId === playerId ? idx : -1)
         .filter(idx => idx !== -1);
       
       if (playerServeIndices.length > 0) {
         // 最後の記録を削除
         const lastIndex = playerServeIndices[playerServeIndices.length - 1];
-        currentSetData.serves.splice(lastIndex, 1);
+        match.sets[currentSetIndex].serves.splice(lastIndex, 1);
         console.log('✅ Serve undone for player:', playerId);
         onUpdate(updatedMatch);
       } else {
         alert('削除するサーブ記録がありません');
       }
     } else {
-      if (!currentSetData.receives) return;
+      if (!match.sets[currentSetIndex].receives) return;
       
       // 指定した選手のレシーブ記録を取得
-      const playerReceiveIndices = currentSetData.receives
+      const playerReceiveIndices = match.sets[currentSetIndex].receives
         .map((r, idx) => r.playerId === playerId ? idx : -1)
         .filter(idx => idx !== -1);
       
       if (playerReceiveIndices.length > 0) {
         // 最後の記録を削除
         const lastIndex = playerReceiveIndices[playerReceiveIndices.length - 1];
-        currentSetData.receives.splice(lastIndex, 1);
+        match.sets[currentSetIndex].receives.splice(lastIndex, 1);
         console.log('✅ Receive undone for player:', playerId);
         onUpdate(updatedMatch);
       } else {
@@ -205,23 +206,23 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       return;
     }
 
-    const currentSetData = match.sets[currentSet];
-    if (!currentSetData) return;
+    const match.sets[currentSetIndex] = match.sets[currentSetIndex];
+    if (!match.sets[currentSetIndex]) return;
 
     // OUT は履歴用（players 配列の並びは一切変更しない）
-    const outPlayer = currentSetData.players.find((p) => p.id === benchPlayerId) || null;
+    const outPlayer = match.sets[currentSetIndex].players.find((p: Player) => p.id === benchPlayerId) || null;
 
     // IN 選手を決定（既存選手 or 新規追加）
     let inPlayer = null;
     if (benchPlayerId) {
-      inPlayer = currentSetData.players.find((p) => p.id === benchPlayerId) || null;
+      inPlayer = match.sets[currentSetIndex].players.find((p: Player) => p.id === benchPlayerId) || null;
     }
 
     if (!inPlayer && inPlayerName.trim()) {
       inPlayer = {
         id: `player-${Date.now()}`,
         name: inPlayerName.trim(),
-        number: currentSetData.players.length + 1,
+        number: match.sets[currentSetIndex].players.length + 1,
       };
     }
 
@@ -233,22 +234,22 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     const updatedSets = [...match.sets];
 
     // players は「登場した選手の名簿」として追加のみ
-    const exists = currentSetData.players.some((p) => p.id === inPlayer.id);
-    const updatedPlayers = exists ? currentSetData.players : [...currentSetData.players, inPlayer];
+    const exists = match.sets[currentSetIndex].players.some((p: Player) => p.id === inPlayer.id);
+    const updatedPlayers = exists ? match.sets[currentSetIndex].players : [...match.sets[currentSetIndex].players, inPlayer];
 
     const updatedSubstitutions = [
-      ...(currentSetData.substitutions || []),
+      ...(match.sets[currentSetIndex].substitutions || []),
       {
         outPlayer: outPlayer || { id: '', name: '', number: 0 },
         inPlayer,
         timestamp: Date.now(),
-        ourScore: currentSetData.ourScore,
-        opponentScore: currentSetData.opponentScore,
+        ourScore: match.sets[currentSetIndex].ourScore,
+        opponentScore: match.sets[currentSetIndex].opponentScore,
       },
     ];
 
-    updatedSets[currentSet] = {
-      ...currentSetData,
+    updatedSets[currentSetIndex] = {
+      ...match.sets[currentSetIndex],
       players: updatedPlayers,
       substitutions: updatedSubstitutions,
     };
@@ -260,22 +261,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setIsEditingSubstitution(false);
   };
 
-      // スマホ表は『先頭6=コート + 7人目以降=ベンチ羅列』
-      // OUTが先頭6人ならその位置に差し替え、そうでなければ追加
-      const outIndex = currentSetData.players.findIndex(p => p.id === benchPlayerId);
-      if (outIndex !== -1 && outIndex < 6) {
-        currentSetData.players[outIndex] = newPlayer;
-      } else {
-        currentSetData.players.push(newPlayer);
-      }
-
       // 交代記録を追加（スコアも記録）
-      currentSetData.substitutions.push({
+      match.sets[currentSetIndex].substitutions.push({
         outPlayer: outPlayerName,
         inPlayer: inPlayerName.trim(),
         timestamp: Date.now(),
-        ourScore: currentSetData.ourScore,
-        opponentScore: currentSetData.opponentScore
+        ourScore: match.sets[currentSetIndex].ourScore,
+        opponentScore: match.sets[currentSetIndex].opponentScore
       });
 
       onUpdate(updatedMatch);
@@ -1074,4 +1066,3 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   );
 };
 
-export default MatchDetail;
