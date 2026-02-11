@@ -410,11 +410,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
   const serveButtons: Array<{ quality: ServeQuality; symbol: string; color: string }> = [
     { quality: 'serve-miss', symbol: '×', color: 'bg-gray-600' },
-    { quality: 'setter-move', symbol: '○', color: 'bg-gray-600' },
-    { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-gray-600' },
-    { quality: 'other-than-setter', symbol: '△', color: 'bg-gray-600' },
-    { quality: 'red-star', symbol: '★', color: 'bg-red-600' },
-    { quality: 'black-star', symbol: '★', color: 'bg-gray-600' }
+    { quality: 'red-star', symbol: '★', color: 'bg-red-600' }
   ];
 
   const receiveButtons: Array<{ quality: ReceiveQuality; symbol: string; color: string }> = [
@@ -571,166 +567,322 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             ))}
           </div>
 
-          {/* 選手記録エリア（モバイル最適化） */}
-          <div className="space-y-4 md:space-y-6">
-            <h3 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Users size={24} />
-              選手記録
-            </h3>
+{/* 選手記録（スマホ：表UIのみ / PC：従来カード） */}
+<div className="space-y-4 md:space-y-6">
+  <h3 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+    <Users size={24} />
+    選手記録
+  </h3>
 
-            {currentSet.players.map((player) => {
-              const serveRecords = getPlayerServeRecords(player.id);
-              const receiveRecords = getPlayerReceiveRecords(player.id);
-              const isEditing = editingPlayerId === player.id;
-              const currentRotation = getServeRotation(player.id);
+  {/* スマホ（md未満）：6人固定の入力パネル（表UI） */}
+  <div className="md:hidden">
+    <div className="overflow-x-auto -mx-4 px-4">
+      <table className="w-full border-collapse min-w-[640px]">
+        <thead>
+          <tr className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+            <th className="border-2 border-purple-700 px-2 py-2 text-left text-sm sticky left-0 bg-purple-600">選手</th>
+            <th className="border-2 border-purple-700 px-2 py-2 text-center text-sm">S</th>
+            <th className="border-2 border-purple-700 px-2 py-2 text-center text-sm">R</th>
+            <th className="border-2 border-purple-700 px-2 py-2 text-center text-sm">Undo</th>
+            <th className="border-2 border-purple-700 px-2 py-2 text-left text-sm">履歴</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentSet.players.slice(0, 6).map((player, idx) => {
+            const serveRecords = getPlayerServeRecords(player.id);
+            const receiveRecords = getPlayerReceiveRecords(player.id);
+            const isEditing = editingPlayerId === player.id;
 
-              return (
-                <div key={player.id} className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
-                  {/* 選手名エリア */}
-                  <div className="mb-4 pb-3 border-b-2 border-gray-300">
-                    {isEditing ? (
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                        <input
-                          type="text"
-                          value={editingPlayerName}
-                          onChange={(e) => setEditingPlayerName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              savePlayerName(player.id);
-                            } else if (e.key === 'Escape') {
-                              cancelEditingPlayer();
-                            }
-                          }}
-                          className="flex-1 px-4 py-3 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-base"
-                          placeholder="選手名を入力"
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => savePlayerName(player.id)}
-                            className="flex-1 sm:flex-none px-5 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold active:scale-95 transition-transform"
-                          >
-                            保存
-                          </button>
-                          <button
-                            onClick={cancelEditingPlayer}
-                            className="flex-1 sm:flex-none px-5 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold active:scale-95 transition-transform"
-                          >
-                            キャンセル
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="flex-1">
-                          <span className="text-lg md:text-xl font-bold text-gray-800">
-                            選手: {player.name || '(未入力)'}
-                          </span>
-                        </div>
+            const renderServeSymbol = (q: any) => {
+              const b = serveButtons.find(x => x.quality === q);
+              if (!b) return '?';
+              return b.symbol;
+            };
+            const renderReceiveSymbol = (q: any) => {
+              const b = receiveButtons.find(x => x.quality === q);
+              if (!b) return '?';
+              return b.symbol;
+            };
+
+            return (
+              <tr key={player.id} className={idx % 2 === 0 ? 'bg-purple-50' : 'bg-white'}>
+                {/* 選手名（固定列） */}
+                <td className="border-2 border-gray-300 px-2 py-2 align-top sticky left-0 bg-inherit">
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editingPlayerName}
+                        onChange={(e) => setEditingPlayerName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') savePlayerName(player.id);
+                          if (e.key === 'Escape') cancelEditingPlayer();
+                        }}
+                        className="w-full px-2 py-2 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-sm"
+                        placeholder="選手名"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => startEditingPlayer(player)}
-                          className="flex items-center gap-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm active:scale-95 transition-transform"
+                          onClick={() => savePlayerName(player.id)}
+                          className="flex-1 px-2 py-2 bg-green-500 text-white rounded-lg font-bold text-sm active:scale-95"
                         >
-                          <Edit2 size={14} />
-                          編集
+                          保存
+                        </button>
+                        <button
+                          onClick={cancelEditingPlayer}
+                          className="flex-1 px-2 py-2 bg-gray-400 text-white rounded-lg font-bold text-sm active:scale-95"
+                        >
+                          ×
                         </button>
                       </div>
-                    )}
-                  </div>
-
-                  {/* 記録表示エリア */}
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-start gap-2">
-                      <span className="font-bold text-gray-700 text-base mt-2">S:</span>
-                      <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 flex flex-wrap gap-1 text-lg">
-                        {serveRecords.map((record, idx) => {
-                          const btn = serveButtons.find(b => b.quality === record.quality);
-                          const isRedStar = record.quality === 'red-star';
-                          return (
-                            <span
-                              key={idx}
-                              className={isRedStar ? 'text-red-600 font-bold' : ''}
-                            >
-                              {btn?.symbol || '?'}
-                            </span>
-                          );
-                        })}
-                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="font-bold text-gray-700 text-base mt-2">R:</span>
-                      <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 flex flex-wrap gap-1 text-lg">
-                        {receiveRecords.map((record, idx) => {
-                          const btn = receiveButtons.find(b => b.quality === record.quality);
-                          return (
-                            <span key={idx}>
-                              {btn?.symbol || '?'}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* サーブボタンエリア（モバイル最適化 + 巡目ボタン追加） */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <p className="text-base font-semibold text-gray-600">サーブ:</p>
-                        <button
-                          onClick={() => toggleServeRotation(player.id)}
-                          className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-bold active:scale-95"
-                        >
-                          {currentRotation}巡目
-                        </button>
+                  ) : (
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-gray-800 truncate">{player.name || '(未入力)'}</div>
                       </div>
                       <button
-                        onClick={() => undoLastRecord(player.id, 'serve')}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold active:scale-95"
+                        onClick={() => startEditingPlayer(player)}
+                        className="shrink-0 px-2 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95"
                       >
-                        ← 1つ戻る
+                        編集
                       </button>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {serveButtons.map((btn) => (
-                        <button
-                          key={btn.quality}
-                          onClick={() => addRecord(player.id, 'serve', btn.quality)}
-                          className={`${btn.color} text-white px-6 py-3 rounded-lg hover:opacity-80 transition-opacity font-bold text-lg active:scale-95 min-w-[3.5rem]`}
-                        >
-                          {btn.symbol}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  )}
+                </td>
 
-                  {/* レシーブボタンエリア（モバイル最適化） */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-base font-semibold text-gray-600">レシーブ:</p>
+                {/* サーブ（2ボタンのみ） */}
+                <td className="border-2 border-gray-300 px-2 py-2 align-top">
+                  <div className="flex gap-2">
+                    {serveButtons.map((btn) => (
                       <button
-                        onClick={() => undoLastRecord(player.id, 'receive')}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold active:scale-95"
+                        key={btn.quality}
+                        onClick={() => addRecord(player.id, 'serve', btn.quality)}
+                        className={`${btn.color} text-white w-12 h-12 rounded-lg font-bold text-lg active:scale-95`}
+                        title={btn.quality}
                       >
-                        ← 1つ戻る
+                        {btn.symbol}
                       </button>
+                    ))}
+                  </div>
+                </td>
+
+                {/* レシーブ（4ボタン） */}
+                <td className="border-2 border-gray-300 px-2 py-2 align-top">
+                  <div className="flex gap-2">
+                    {receiveButtons.map((btn) => (
+                      <button
+                        key={btn.quality}
+                        onClick={() => addRecord(player.id, 'receive', btn.quality)}
+                        className={`${btn.color} text-white w-12 h-12 rounded-lg font-bold text-lg active:scale-95`}
+                        title={btn.quality}
+                      >
+                        {btn.symbol}
+                      </button>
+                    ))}
+                  </div>
+                </td>
+
+                {/* Undo */}
+                <td className="border-2 border-gray-300 px-2 py-2 align-top">
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => undoLastRecord(player.id, 'serve')}
+                      className="px-2 py-2 bg-orange-500 text-white rounded-lg font-bold text-xs active:scale-95"
+                    >
+                      S戻す
+                    </button>
+                    <button
+                      onClick={() => undoLastRecord(player.id, 'receive')}
+                      className="px-2 py-2 bg-orange-500 text-white rounded-lg font-bold text-xs active:scale-95"
+                    >
+                      R戻す
+                    </button>
+                  </div>
+                </td>
+
+                {/* 履歴（直近だけ表示） */}
+                <td className="border-2 border-gray-300 px-2 py-2 align-top">
+                  <div className="text-xs text-gray-700 space-y-1">
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold">S:</span>
+                      <span className="break-words">{serveRecords.slice(-10).map((r) => renderServeSymbol(r.quality)).join(' ')}</span>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {receiveButtons.map((btn) => (
-                        <button
-                          key={btn.quality}
-                          onClick={() => addRecord(player.id, 'receive', btn.quality)}
-                          className={`${btn.color} text-white px-6 py-3 rounded-lg hover:opacity-80 transition-opacity font-bold text-lg active:scale-95 min-w-[3.5rem]`}
-                        >
-                          {btn.symbol}
-                        </button>
-                      ))}
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold">R:</span>
+                      <span className="break-words">{receiveRecords.slice(-10).map((r) => renderReceiveSymbol(r.quality)).join(' ')}</span>
                     </div>
                   </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+
+    <div className="mt-3 text-xs text-gray-600">
+      スマホは表入力のみ（サーブは × / ★(赤) の2ボタン）
+    </div>
+  </div>
+
+  {/* PC（md以上）：従来のカードUI */}
+  <div className="hidden md:block">
+    {currentSet.players.map((player) => {
+      const serveRecords = getPlayerServeRecords(player.id);
+      const receiveRecords = getPlayerReceiveRecords(player.id);
+      const isEditing = editingPlayerId === player.id;
+      const currentRotation = getServeRotation(player.id);
+
+      return (
+        <div key={player.id} className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+          {/* 選手名エリア */}
+          <div className="mb-4 pb-3 border-b-2 border-gray-300">
+            {isEditing ? (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="text"
+                  value={editingPlayerName}
+                  onChange={(e) => setEditingPlayerName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      savePlayerName(player.id);
+                    } else if (e.key === 'Escape') {
+                      cancelEditingPlayer();
+                    }
+                  }}
+                  className="flex-1 px-4 py-3 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-base"
+                  placeholder="選手名を入力"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => savePlayerName(player.id)}
+                    className="flex-1 sm:flex-none px-5 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold active:scale-95 transition-transform"
+                  >
+                    保存
+                  </button>
+                  <button
+                    onClick={cancelEditingPlayer}
+                    className="flex-1 sm:flex-none px-5 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold active:scale-95 transition-transform"
+                  >
+                    キャンセル
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex-1">
+                  <span className="text-lg md:text-xl font-bold text-gray-800">
+                    選手: {player.name || '(未入力)'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => startEditingPlayer(player)}
+                  className="flex items-center gap-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm active:scale-95 transition-transform"
+                >
+                  <Edit2 size={14} />
+                  編集
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* 記録表示エリア */}
+          <div className="space-y-3 mb-4">
+            <div className="flex items-start gap-2">
+              <span className="font-bold text-gray-700 text-base mt-2">S:</span>
+              <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 flex flex-wrap gap-1 text-lg">
+                {serveRecords.map((record, idx) => {
+                  const btn = serveButtons.find(b => b.quality === record.quality);
+                  const isRedStar = record.quality === 'red-star';
+                  return (
+                    <span
+                      key={idx}
+                      className={isRedStar ? 'text-red-600 font-bold' : ''}
+                    >
+                      {btn?.symbol || '?'}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="font-bold text-gray-700 text-base mt-2">R:</span>
+              <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 flex flex-wrap gap-1 text-lg">
+                {receiveRecords.map((record, idx) => {
+                  const btn = receiveButtons.find(b => b.quality === record.quality);
+                  return (
+                    <span key={idx}>
+                      {btn?.symbol || '?'}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* サーブボタンエリア（巡目ボタン） */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <p className="text-base font-semibold text-gray-600">サーブ:</p>
+                <button
+                  onClick={() => toggleServeRotation(player.id)}
+                  className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-bold active:scale-95"
+                >
+                  {currentRotation}巡目
+                </button>
+              </div>
+              <button
+                onClick={() => undoLastRecord(player.id, 'serve')}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold active:scale-95"
+              >
+                ← 1つ戻る
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {serveButtons.map((btn) => (
+                <button
+                  key={btn.quality}
+                  onClick={() => addRecord(player.id, 'serve', btn.quality)}
+                  className={`${btn.color} text-white px-6 py-3 rounded-lg hover:opacity-80 transition-opacity font-bold text-lg active:scale-95 min-w-[3.5rem]`}
+                >
+                  {btn.symbol}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* レシーブボタンエリア */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-base font-semibold text-gray-600">レシーブ:</p>
+              <button
+                onClick={() => undoLastRecord(player.id, 'receive')}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold active:scale-95"
+              >
+                ← 1つ戻る
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {receiveButtons.map((btn) => (
+                <button
+                  key={btn.quality}
+                  onClick={() => addRecord(player.id, 'receive', btn.quality)}
+                  className={`${btn.color} text-white px-6 py-3 rounded-lg hover:opacity-80 transition-opacity font-bold text-lg active:scale-95 min-w-[3.5rem]`}
+                >
+                  {btn.symbol}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</div>
 
           {/* 交代履歴 */}
           {currentSet.substitutions && currentSet.substitutions.length > 0 && (
@@ -808,7 +960,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     <th className="border-2 border-purple-700 px-3 py-3 text-left text-sm md:text-base sticky left-0 bg-purple-600">選手名</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S合計</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R合計</th>
-                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S━</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S×</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S○</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S◎</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S△</th>
