@@ -38,19 +38,19 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     if (!currentSet.players || currentSet.players.length === 0) {
       console.log('⚠️ 選手が存在しないため、6人分の選手を自動作成します');
       
-      const  = { ...match };
+      const updatedMatch = { ...match };
       const initialPlayers = Array.from({ length: 6 }, (_, index) => ({
         id: `player-${Date.now()}-${index}`,
         name: '',
         number: index + 1
       }));
 
-      .sets = .sets.map(set => ({
+      updatedMatch.sets = updatedMatch.sets.map(set => ({
         ...set,
         players: set.players && set.players.length > 0 ? set.players : initialPlayers
       }));
 
-      onUpdate();
+      onUpdate(updatedMatch);
     }
     
     setIsInitialized(true);
@@ -87,8 +87,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const handleSetChange = (index: number) => {
     setCurrentSetIndex(index);
     
-    const  = { ...match };
-    while (.sets.length <= index) {
+    const updatedMatch = { ...match };
+    while (updatedMatch.sets.length <= index) {
       const previousPlayers = currentSet.players && currentSet.players.length > 0 
         ? currentSet.players 
         : Array.from({ length: 6 }, (_, i) => ({
@@ -97,7 +97,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             number: i + 1
           }));
 
-      .sets.push({
+      updatedMatch.sets.push({
         ourScore: 0,
         opponentScore: 0,
         players: previousPlayers,
@@ -106,48 +106,48 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         substitutions: []
       });
     }
-    onUpdate();
+    onUpdate(updatedMatch);
   };
 
   const updateScore = (field: 'ourScore' | 'opponentScore', value: number) => {
-    const  = { ...match };
-    .sets[currentSetIndex][field] = Math.max(0, value);
-    onUpdate();
+    const updatedMatch = { ...match };
+    updatedMatch.sets[currentSetIndex][field] = Math.max(0, value);
+    onUpdate(updatedMatch);
   };
 
   const updateResult = (result: 'win' | 'lose') => {
-    const  = { ...match };
-    .result = result;
-    onUpdate();
+    const updatedMatch = { ...match };
+    updatedMatch.result = result;
+    onUpdate(updatedMatch);
     console.log('✅ 勝敗更新:', result === 'win' ? 'WIN' : 'LOSE');
   };
 
   const addRecord = (playerId: string, type: 'serve' | 'receive', quality: ServeQuality | ReceiveQuality) => {
     console.log('🔵 addRecord called:', { playerId, type, quality });
     
-    const  = { ...match };
-    const currentSetData = .sets[currentSetIndex];
+    const updatedMatch = { ...match };
+    const currentSetData = updatedMatch.sets[currentSetIndex];
 
     // 配列が存在しない場合は初期化
-    if (!match.sets[currentSetIndex].serves) {
-      match.sets[currentSetIndex].serves = [];
+    if (!currentSetData.serves) {
+      currentSetData.serves = [];
     }
-    if (!match.sets[currentSetIndex].receives) {
-      match.sets[currentSetIndex].receives = [];
+    if (!currentSetData.receives) {
+      currentSetData.receives = [];
     }
     if (!match.sets[currentSetIndex].substitutions) {
       match.sets[currentSetIndex].substitutions = [];
     }
 
     if (type === 'serve') {
-      match.sets[currentSetIndex].serves.push({
+      currentSetData.serves.push({
         playerId,
         quality: quality as ServeQuality,
         timestamp: Date.now()
       });
       console.log('✅ Serve added:', match.sets[currentSetIndex].serves.length);
     } else {
-      match.sets[currentSetIndex].receives.push({
+      currentSetData.receives.push({
         playerId,
         quality: quality as ReceiveQuality,
         timestamp: Date.now()
@@ -156,18 +156,18 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     }
 
     console.log('🔄 Calling onUpdate...');
-    onUpdate();
+    onUpdate(updatedMatch);
   };
 
   const undoLastRecord = (playerId: string, type: 'serve' | 'receive') => {
-    const  = { ...match };
-    const currentSetData = .sets[currentSetIndex];
+    const updatedMatch = { ...match };
+    const currentSetData = updatedMatch.sets[currentSetIndex];
 
     if (type === 'serve') {
-      if (!match.sets[currentSetIndex].serves) return;
+      if (!currentSetData.serves) return;
       
       // 指定した選手のサーブ記録を取得
-      const playerServeIndices = match.sets[currentSetIndex].serves
+      const playerServeIndices = currentSetData.serves
         .map((s, idx) => s.playerId === playerId ? idx : -1)
         .filter(idx => idx !== -1);
       
@@ -176,15 +176,15 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         const lastIndex = playerServeIndices[playerServeIndices.length - 1];
         match.sets[currentSetIndex].serves.splice(lastIndex, 1);
         console.log('✅ Serve undone for player:', playerId);
-        onUpdate();
+        onUpdate(updatedMatch);
       } else {
         alert('削除するサーブ記録がありません');
       }
     } else {
-      if (!match.sets[currentSetIndex].receives) return;
+      if (!currentSetData.receives) return;
       
       // 指定した選手のレシーブ記録を取得
-      const playerReceiveIndices = match.sets[currentSetIndex].receives
+      const playerReceiveIndices = currentSetData.receives
         .map((r, idx) => r.playerId === playerId ? idx : -1)
         .filter(idx => idx !== -1);
       
@@ -193,7 +193,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         const lastIndex = playerReceiveIndices[playerReceiveIndices.length - 1];
         match.sets[currentSetIndex].receives.splice(lastIndex, 1);
         console.log('✅ Receive undone for player:', playerId);
-        onUpdate();
+        onUpdate(updatedMatch);
       } else {
         alert('削除するレシーブ記録がありません');
       }
@@ -312,7 +312,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       return;
     }
 
-    const  = { ...match };
+    const updatedMatch = { ...match };
     
     .sets.forEach(set => {
       const playerIndex = set.players.findIndex(p => p.id === playerId);
@@ -321,7 +321,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       }
     });
 
-    onUpdate();
+    onUpdate(updatedMatch);
     setEditingPlayerId(null);
     setEditingPlayerName('');
   };
