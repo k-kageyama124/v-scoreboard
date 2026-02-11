@@ -226,9 +226,27 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         id: `player-${Date.now()}`,
         name: inPlayerName.trim(),
         number: currentSetData.players.length + 1
-      };
-      
-      currentSetData.players.push(newPlayer);
+      };      // スマホ表は『先頭6=コート + 7人目以降=ベンチ羅列』のため、
+      // OUTが先頭6人ならその位置に差し替え、そうでなければ追加
+      const outIndex = currentSetData.players.findIndex(p => p.id === benchPlayerId);
+      if (outIndex !== -1 && outIndex < 6) {
+        currentSetData.players[outIndex] = newPlayer;
+      } else {
+        currentSetData.players.push(newPlayer);
+      }
+        if (outIndex !== -1 && outIndex < 6) {
+          base[outIndex] = newPlayer.id;
+        }
+        // 7枠目は常に「ベンチ扱い（7人目）」を表示
+        const benchPlayer = currentSetData.players[6];
+        if (benchPlayer) {
+          if (base.length < 7) {
+            while (base.length < 7) { base.push(''); }
+          }
+          base[6] = benchPlayer.id;
+        }
+        return base.slice(0, 7);
+      });
       
       // 交代記録を追加（スコアも記録）
       currentSetData.substitutions.push({
@@ -589,7 +607,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           </tr>
         </thead>
         <tbody>
-          {currentSet.players.slice(0, 6).map((player, idx) => {
+          {currentSet.players.map((player, idx) => {
             const serveRecords = getPlayerServeRecords(player.id);
             const receiveRecords = getPlayerReceiveRecords(player.id);
             const isEditing = editingPlayerId === player.id;
@@ -724,7 +742,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     </div>
 
     <div className="mt-3 text-xs text-gray-600">
-      スマホは表入力のみ（サーブは × / ★(赤) / ★(黒)）
+      スマホは表入力のみ（先頭6=コート、7人目以降=ベンチ / サーブは × / ★(赤) / ★(黒)）
     </div>
   </div>
 
