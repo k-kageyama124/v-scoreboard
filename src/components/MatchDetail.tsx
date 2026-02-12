@@ -299,12 +299,12 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setIsEditingSubstitution(false);
   };
 
-      const startEditingPlayer = (player: Player) => {
+  const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setEditingPlayerName(player.name);
   };
 
-  const savePlayerName = (playerId: string) => {
+  const savePlayerName = () => {
     const trimmedName = editingPlayerName.trim();
     
     if (trimmedName === '') {
@@ -326,7 +326,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setEditingPlayerName('');
   };
 
-  const cancelEditingPlayer = () => {
+  const cancelEditing = () => {
     setEditingPlayerId(null);
     setEditingPlayerName('');
   };
@@ -464,10 +464,10 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   ];
 
   const receiveButtons: Array<{ quality: ReceiveQuality; symbol: string; color: string }> = [
-    { quality: 'setter-return', symbol: '×', color: 'bg-gray-600' },
-    { quality: 'no-return', symbol: '○', color: 'bg-gray-600' },
     { quality: 'setter-pinpoint', symbol: '◎', color: 'bg-gray-600' },
-    { quality: 'other-than-setter', symbol: '△', color: 'bg-gray-600' }
+    { quality: 'no-return', symbol: '○', color: 'bg-gray-600' },
+    { quality: 'other-than-setter', symbol: '△', color: 'bg-gray-600' },
+    { quality: 'setter-return', symbol: '×', color: 'bg-gray-600' },
   ];
 
   const getPlayerServeRecords = (playerId: string) => {
@@ -1017,9 +1017,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S合計</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R合計</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S×</th>
-                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S○</th>
-                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S◎</th>
-                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S△</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base"></th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base"></th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base"></th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S★(赤)</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S★(黒)</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R×</th>
@@ -1041,9 +1041,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                         {player.totalReceives}
                       </td>
                       <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['serve-miss'] + player.serveDetails['dash']}</td>
-                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['setter-move']}</td>
-                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['setter-pinpoint']}</td>
-                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['other-than-setter']}</td>
                       <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['red-star']}</td>
                       <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['black-star']}</td>
                       <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['setter-return']}</td>
@@ -1065,9 +1062,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                 <p className="font-semibold text-gray-700 mb-2 text-base">サーブ:</p>
                 <ul className="space-y-1 text-sm text-gray-600">
                   <li>× = サーブミス</li>
-                  <li>○ = セッターが動いた</li>
-                  <li>◎ = セッターにピンポイント</li>
-                  <li>△ = セッター以外が返した</li>
                   <li>★(赤) = ノータッチエース&相手が弾いた</li>
                   <li>★(黒) = 取られたけど繋がらない</li>
                 </ul>
@@ -1075,9 +1069,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               <div>
                 <p className="font-semibold text-gray-700 mb-2 text-base">レシーブ:</p>
                 <ul className="space-y-1 text-sm text-gray-600">
-                  <li>◎ = セッター動かさず返球</li>
-                  <li>○ = セッター動いたけどセッターに返球</li>
-                  <li>△ = セッター以外が返球</li>
                   <li>× = 返らず</li>
                 </ul>
               </div>
@@ -1087,4 +1078,3 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       </div>
     </div>
   );
-}
