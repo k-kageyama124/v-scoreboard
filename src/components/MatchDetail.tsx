@@ -425,6 +425,12 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     return currentSet.receives.filter((r) => r.playerId === playerId);
   };
 
+  const chunkRecords = <T,>(arr: T[], size: number) => {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  };
+
   if (!currentSet || !currentSet.players || currentSet.players.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
@@ -696,20 +702,28 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                               <div className="flex items-start gap-2">
                                 <span className="font-bold">S:</span>
                                 <span className="break-words">
-                                  {serveRecords.slice(-10).map((r, i) => (
-                                    <span key={i} className="mr-1">
-                                      {renderServeSymbol(r.quality)}
-                                    </span>
+                                  {chunkRecords(serveRecords, 6).map((row, rowIndex) => (
+                                    <div key={rowIndex} className="flex flex-wrap">
+                                      {row.map((r, i) => (
+                                        <span key={i} className="mr-1">
+                                          {renderServeSymbol(r.quality)}
+                                        </span>
+                                      ))}
+                                    </div>
                                   ))}
                                 </span>
                               </div>
                               <div className="flex items-start gap-2">
                                 <span className="font-bold">R:</span>
                                 <span className="break-words">
-                                  {receiveRecords.slice(-10).map((r, i) => (
-                                    <span key={i} className="mr-1">
-                                      {renderReceiveSymbol(r.quality)}
-                                    </span>
+                                  {chunkRecords(receiveRecords, 6).map((row, rowIndex) => (
+                                    <div key={rowIndex} className="flex flex-wrap">
+                                      {row.map((r, i) => (
+                                        <span key={i} className="mr-1">
+                                          {renderReceiveSymbol(r.quality)}
+                                        </span>
+                                      ))}
+                                    </div>
                                   ))}
                                 </span>
                               </div>
