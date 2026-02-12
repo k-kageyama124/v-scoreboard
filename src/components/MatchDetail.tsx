@@ -806,7 +806,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                       savePlayerName(player.id);
                     } else if (e.key === 'Escape') {
                       cancelEditingPlayer();
-                    }
                   }}
                   className="flex-1 px-4 py-3 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-base"
                   placeholder="選手名を入力"
