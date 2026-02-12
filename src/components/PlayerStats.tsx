@@ -37,7 +37,7 @@ export default function PlayerStats({ matches, onBack, onSelectPlayer }: PlayerS
               totalServes: 0,
               totalReceives: 0,
               serveSuccess: 0,
-              receiveSuccess: 0
+              receiveSuccess: 0,
             });
           }
         });
@@ -45,16 +45,17 @@ export default function PlayerStats({ matches, onBack, onSelectPlayer }: PlayerS
         // サーブ記録
         if (set.serves) {
           set.serves.forEach((serve) => {
-            const player = set.players.find(p => p.id === serve.playerId);
+            const player = set.players.find((p) => p.id === serve.playerId);
             if (!player || !player.name) return;
 
             const summary = playerMap.get(player.name);
-            if (summary) {
-              summary.totalServes++;
-              // サーブ成功の定義: ミス以外
-              if (serve.quality !== 'serve-miss') {
-                summary.serveSuccess++;
-              }
+            if (!summary) return;
+
+            summary.totalServes++;
+            // サーブ成功率定義: (総数 - ×) / 総数
+            // × = serve-miss
+            if (serve.quality !== 'serve-miss') {
+              summary.serveSuccess++;
             }
           });
         }
@@ -62,16 +63,17 @@ export default function PlayerStats({ matches, onBack, onSelectPlayer }: PlayerS
         // レシーブ記録
         if (set.receives) {
           set.receives.forEach((receive) => {
-            const player = set.players.find(p => p.id === receive.playerId);
+            const player = set.players.find((p) => p.id === receive.playerId);
             if (!player || !player.name) return;
 
             const summary = playerMap.get(player.name);
-            if (summary) {
-              summary.totalReceives++;
-              // レシーブ成功の定義: セッターに返った、ピンポイント
-              if (receive.quality === 'no-return' || receive.quality === 'setter-pinpoint') {
-                summary.receiveSuccess++;
-              }
+            if (!summary) return;
+
+            summary.totalReceives++;
+            // レシーブ成功率定義: (総数 - ×) / 総数
+            // × = setter-return
+            if (receive.quality !== 'setter-return') {
+              summary.receiveSuccess++;
             }
           });
         }
@@ -80,10 +82,10 @@ export default function PlayerStats({ matches, onBack, onSelectPlayer }: PlayerS
 
     // 試合数をカウント
     playerMap.forEach((summary) => {
-      let matchSet = new Set<string>();
+      const matchSet = new Set<string>();
       matches.forEach((match) => {
         match.sets.forEach((set) => {
-          if (set.players && set.players.some(p => p.name === summary.name)) {
+          if (set.players && set.players.some((p) => p.name === summary.name)) {
             matchSet.add(match.id);
           }
         });
@@ -153,36 +155,22 @@ export default function PlayerStats({ matches, onBack, onSelectPlayer }: PlayerS
               </thead>
               <tbody>
                 {playerSummaries.map((player, idx) => {
-                  const serveRate = player.totalServes > 0
-                    ? ((player.serveSuccess / player.totalServes) * 100).toFixed(1)
-                    : '-';
-                  const receiveRate = player.totalReceives > 0
-                    ? ((player.receiveSuccess / player.totalReceives) * 100).toFixed(1)
-                    : '-';
+                  const serveRate = player.totalServes > 0 ? ((player.serveSuccess / player.totalServes) * 100).toFixed(1) : '-';
+                  const receiveRate = player.totalReceives > 0 ? ((player.receiveSuccess / player.totalReceives) * 100).toFixed(1) : '-';
 
                   return (
                     <tr
                       key={player.name}
                       onClick={() => onSelectPlayer(player.name)}
-                      className={`cursor-pointer hover:bg-purple-100 transition-colors ${
-                        idx % 2 === 0 ? 'bg-purple-50' : 'bg-white'
-                      }`}
+                      className={`cursor-pointer hover:bg-purple-100 transition-colors ${idx % 2 === 0 ? 'bg-purple-50' : 'bg-white'}`}
                     >
-                      <td className="border-2 border-gray-300 px-4 py-3 font-semibold text-purple-700">
-                        {player.name}
-                      </td>
-                      <td className="border-2 border-gray-300 px-4 py-3 text-center font-bold">
-                        {player.matchCount}
-                      </td>
-                      <td className="border-2 border-gray-300 px-4 py-3 text-center">
-                        {player.totalServes}
-                      </td>
+                      <td className="border-2 border-gray-300 px-4 py-3 font-semibold text-purple-700">{player.name}</td>
+                      <td className="border-2 border-gray-300 px-4 py-3 text-center font-bold">{player.matchCount}</td>
+                      <td className="border-2 border-gray-300 px-4 py-3 text-center">{player.totalServes}</td>
                       <td className="border-2 border-gray-300 px-4 py-3 text-center font-semibold text-blue-600">
                         {serveRate !== '-' ? `${serveRate}%` : '-'}
                       </td>
-                      <td className="border-2 border-gray-300 px-4 py-3 text-center">
-                        {player.totalReceives}
-                      </td>
+                      <td className="border-2 border-gray-300 px-4 py-3 text-center">{player.totalReceives}</td>
                       <td className="border-2 border-gray-300 px-4 py-3 text-center font-semibold text-green-600">
                         {receiveRate !== '-' ? `${receiveRate}%` : '-'}
                       </td>
