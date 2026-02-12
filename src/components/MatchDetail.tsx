@@ -946,6 +946,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S★(赤)</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S★(黒)</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R×</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R○</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R◎</th>
+                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R△</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -962,6 +965,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                       <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['red-star']}</td>
                       <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.serveDetails['black-star']}</td>
                       <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['setter-return']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['no-return']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['setter-pinpoint']}</td>
+                      <td className="border-2 border-gray-300 px-3 py-2 text-center text-sm md:text-base">{player.receiveDetails['other-than-setter']}</td>
                     </tr>
                   ))}
                 </tbody>
