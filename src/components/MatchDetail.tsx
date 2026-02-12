@@ -242,8 +242,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     const updatedSubstitutions = [
       ...(currentSetData.substitutions || []),
       {
-        outPlayer: (outPlayer?.name || ''),
-        inPlayer: (inPlayer.name || ''),
+        outPlayer: outPlayer || { id: '', name: '', number: 0 },
+        inPlayer,
         timestamp: Date.now(),
         ourScore: currentSetData.ourScore,
         opponentScore: currentSetData.opponentScore,
@@ -262,7 +262,44 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setInPlayerName('');
     setIsEditingSubstitution(false);
   };
-  const startEditingPlayer = (player: Player) => {
+    }
+
+    if (!inPlayer) {
+      alert('INする選手が見つかりません');
+      return;
+    }
+
+    const updatedSets = [...match.sets];
+
+    // players は「登場した選手の名簿」として追加のみ
+    const exists = match.sets[currentSetIndex].players.some((p: Player) => p.id === inPlayer.id);
+    const updatedPlayers = exists ? match.sets[currentSetIndex].players : [...match.sets[currentSetIndex].players, inPlayer];
+
+    const updatedSubstitutions = [
+      ...(match.sets[currentSetIndex].substitutions || []),
+      {
+        outPlayer: outPlayer || { id: '', name: '', number: 0 },
+        inPlayer,
+        timestamp: Date.now(),
+        ourScore: match.sets[currentSetIndex].ourScore,
+        opponentScore: match.sets[currentSetIndex].opponentScore,
+      },
+    ];
+
+    updatedSets[currentSetIndex] = {
+      ...match.sets[currentSetIndex],
+      players: updatedPlayers,
+      substitutions: updatedSubstitutions,
+    };
+
+    onUpdate({ ...match, sets: updatedSets });
+
+    setBenchPlayerId('');
+    setInPlayerName('');
+    setIsEditingSubstitution(false);
+  };
+
+      const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setEditingPlayerName(player.name);
   };
@@ -289,7 +326,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setEditingPlayerName('');
   };
 
-  const cancelEditing = () => {
+  const cancelEditingPlayer = () => {
     setEditingPlayerId(null);
     setEditingPlayerName('');
   };
@@ -631,7 +668,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                         onChange={(e) => setEditingPlayerName(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') savePlayerName(player.id);
-                          if (e.key === 'Escape') cancelEditing();
+                          if (e.key === 'Escape') cancelEditingPlayer();
                         }}
                         className="w-full px-2 py-2 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-sm"
                         placeholder="選手名"
@@ -645,7 +682,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                           保存
                         </button>
                         <button
-                          onClick={cancelEditing}
+                          onClick={cancelEditingPlayer}
                           className="flex-1 px-2 py-2 bg-gray-400 text-white rounded-lg font-bold text-sm active:scale-95"
                         >
                           ×
@@ -768,7 +805,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     if (e.key === 'Enter') {
                       savePlayerName(player.id);
                     } else if (e.key === 'Escape') {
-                      cancelEditing();
+                      cancelEditingPlayer();
                     }
                   }}
                   className="flex-1 px-4 py-3 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-base"
@@ -783,7 +820,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     保存
                   </button>
                   <button
-                    onClick={cancelEditing}
+                    onClick={cancelEditingPlayer}
                     className="flex-1 sm:flex-none px-5 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold active:scale-95 transition-transform"
                   >
                     キャンセル
@@ -812,14 +849,14 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           <div className="space-y-3 mb-4">
             <div className="flex items-start gap-2">
               <span className="font-bold text-gray-700 text-base mt-2">S:</span>
-              <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 flex flex-wrap gap-1 text-lg">
+              <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 text-lg columns-2 lg:columns-3 [column-fill:auto]">
                 {serveRecords.map((record, idx) => {
                   const btn = serveButtons.find(b => b.quality === record.quality);
                   const isRedStar = record.quality === 'red-star';
                   return (
                     <span
                       key={idx}
-                      className={isRedStar ? 'text-red-600 font-bold' : ''}
+                      className={(isRedStar ? 'text-red-600 font-bold ' : '') + 'inline-block mr-1'}
                     >
                       {btn?.symbol || '?'}
                     </span>
@@ -829,11 +866,11 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </div>
             <div className="flex items-start gap-2">
               <span className="font-bold text-gray-700 text-base mt-2">R:</span>
-              <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 flex flex-wrap gap-1 text-lg">
+              <div className="flex-1 min-h-[3rem] p-3 bg-white rounded border border-gray-300 text-lg columns-2 lg:columns-3 [column-fill:auto]">
                 {receiveRecords.map((record, idx) => {
                   const btn = receiveButtons.find(b => b.quality === record.quality);
                   return (
-                    <span key={idx}>
+                    <span key={idx} className="inline-block mr-1">
                       {btn?.symbol || '?'}
                     </span>
                   );
@@ -980,9 +1017,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S合計</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R合計</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S×</th>
-                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base"></th>
-                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base"></th>
-                    <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base"></th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S★(赤)</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">S★(黒)</th>
                     <th className="border-2 border-purple-700 px-3 py-3 text-center text-sm md:text-base">R×</th>
