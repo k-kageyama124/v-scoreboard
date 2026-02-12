@@ -990,6 +990,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                 <p className="font-semibold text-gray-700 mb-2 text-base">レシーブ:</p>
                 <ul className="space-y-1 text-sm text-gray-600">
                   <li>× = 返らず</li>
+                  <li>○ = 返った（ただし良くない）</li>
+                  <li>◎ = ナイスレシーブ</li>
+                  <li>△ = セッター以外に返った</li>
                 </ul>
               </div>
             </div>
