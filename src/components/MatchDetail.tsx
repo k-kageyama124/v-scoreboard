@@ -242,8 +242,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     const updatedSubstitutions = [
       ...(currentSetData.substitutions || []),
       {
-        outPlayer: outPlayer || { id: '', name: '', number: 0 },
-        inPlayer,
+        outPlayer: (outPlayer?.name || ''),
+        inPlayer: (inPlayer.name || ''),
         timestamp: Date.now(),
         ourScore: currentSetData.ourScore,
         opponentScore: currentSetData.opponentScore,
@@ -631,7 +631,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                         onChange={(e) => setEditingPlayerName(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') savePlayerName(player.id);
-                          if (e.key === 'Escape') cancelEditingPlayer();
+                          if (e.key === 'Escape') cancelEditing();
                         }}
                         className="w-full px-2 py-2 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-sm"
                         placeholder="選手名"
@@ -645,7 +645,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                           保存
                         </button>
                         <button
-                          onClick={cancelEditingPlayer}
+                          onClick={cancelEditing}
                           className="flex-1 px-2 py-2 bg-gray-400 text-white rounded-lg font-bold text-sm active:scale-95"
                         >
                           ×
@@ -768,7 +768,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     if (e.key === 'Enter') {
                       savePlayerName(player.id);
                     } else if (e.key === 'Escape') {
-                      cancelEditingPlayer();
+                      cancelEditing();
                     }
                   }}
                   className="flex-1 px-4 py-3 border-2 border-purple-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 text-base"
@@ -783,7 +783,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                     保存
                   </button>
                   <button
-                    onClick={cancelEditingPlayer}
+                    onClick={cancelEditing}
                     className="flex-1 sm:flex-none px-5 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-bold active:scale-95 transition-transform"
                   >
                     キャンセル
