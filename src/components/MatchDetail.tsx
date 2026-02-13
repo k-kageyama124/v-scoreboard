@@ -554,7 +554,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
                     return (
                       <tr key={player.id} className={idx % 2 === 0 ? 'bg-purple-50' : 'bg-white'}>
-                      <td className="border-2 border-gray-300 px-2 py-2 align-top sticky left-0 bg-inherit w-[6.5rem] min-w-[6.5rem] max-w-[6.5rem]">
+                      <td className="border-2 border-gray-300 px-2 py-2 align-top sticky left-0 bg-inherit w-[10rem] min-w-[10rem] max-w-[10rem]">
                           {isEditing ? (
                             <div className="space-y-2">
                               <input
