@@ -304,6 +304,63 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
     onUpdate({ ...match, sets: updatedSets });
   };
+   // 同名重複を修正（現在セットのみ）：古い方（先に出てくる方）を残す
+  const fixDuplicatePlayersInCurrentSet = () => {
+    if (!currentSetData) return;
+
+    if (!confirm('同名の重複選手を統合します（このセットのみ）。よろしいですか？')) return;
+
+    const updatedSets = match.sets.map((set: any, idx: number) => {
+      if (idx !== currentSetIndex) return set;
+
+      const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
+      const statActions: StatAction[] = Array.isArray(set.statActions) ? [...set.statActions] : [];
+      const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
+
+      // name(trim) -> keepId（最初に出てきたID）
+      const keepIdByName = new Map<string, string>();
+      // duplicateId -> keepId
+      const redirect = new Map<string, string>();
+
+      players.forEach((p) => {
+        const key = (p.name || '').trim();
+        if (!key) return; // 未入力は統合しない
+        if (!keepIdByName.has(key)) {
+          keepIdByName.set(key, p.id);
+        } else {
+          redirect.set(p.id, keepIdByName.get(key)!);
+        }
+      });
+
+      // リダイレクトが無ければ何もしない
+      if (redirect.size === 0) return set;
+
+      // players から重複IDを除外（keepId は残す）
+      const nextPlayers = players.filter((p) => !redirect.has(p.id));
+
+      // statActions の playerId を寄せる
+      const nextStatActions = statActions.map((a) => {
+        const to = redirect.get(a.playerId);
+        return to ? { ...a, playerId: to } : a;
+      });
+
+      // substitutions の out/in も寄せる
+      const nextSubstitutions = substitutions.map((s: any) => ({
+        ...s,
+        outPlayer: redirect.get(s.outPlayer) || s.outPlayer,
+        inPlayer: redirect.get(s.inPlayer) || s.inPlayer,
+      }));
+
+      return {
+        ...set,
+        players: nextPlayers,
+        statActions: nextStatActions,
+        substitutions: nextSubstitutions,
+      };
+    });
+
+    onUpdate({ ...match, sets: updatedSets });
+  };
   const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setEditingPlayerName(player.name || '');
@@ -666,17 +723,24 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </button>
           </div>
 
-          {/* 交代履歴 */}
-          <div className="mt-4">
-           <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2">
   <div className="font-bold text-gray-800">交代履歴</div>
 
-  <button
-    onClick={deleteLastSubstitution}
-    className="px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700"
-  >
-    最後の交代を削除
-  </button>
+  <div className="flex items-center gap-2">
+    <button
+      onClick={fixDuplicatePlayersInCurrentSet}
+      className="px-3 py-2 rounded-lg bg-gray-700 text-white text-xs font-bold hover:bg-gray-800"
+    >
+      重複を修正
+    </button>
+
+    <button
+      onClick={deleteLastSubstitution}
+      className="px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700"
+    >
+      最後の交代を削除
+    </button>
+  </div>
 </div>
             {(currentSetData.substitutions || []).length === 0 ? (
               <div className="text-sm text-gray-500">まだ交代はありません</div>
