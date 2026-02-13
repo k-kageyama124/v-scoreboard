@@ -809,6 +809,5 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           </div>
         </div>
       </div>
-    </div>
   );
 }
