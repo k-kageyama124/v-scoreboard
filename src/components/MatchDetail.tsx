@@ -277,7 +277,33 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setBenchPlayerId('');
     setInPlayerName('');
   };
+// 交代履歴：最後の1件だけ削除（安全運用）
+  const deleteLastSubstitution = () => {
+    if (!currentSetData) return;
 
+    const setSubstitutions = Array.isArray(currentSetData.substitutions)
+      ? currentSetData.substitutions
+      : [];
+
+    if (setSubstitutions.length === 0) {
+      alert('削除できる交代履歴がありません');
+      return;
+    }
+
+    if (!confirm('最後の交代を削除しますか？（このセットのみ）')) return;
+
+    const updatedSets = match.sets.map((set: any, idx: number) => {
+      if (idx !== currentSetIndex) return set;
+
+      const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
+      substitutions.pop(); // 最後だけ削除
+
+      // A方式：指摘以外は変えない方針なので players（コート6人）は触らない
+      return { ...set, substitutions };
+    });
+
+    onUpdate({ ...match, sets: updatedSets });
+  };
   const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setEditingPlayerName(player.name || '');
@@ -643,7 +669,16 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
           {/* 交代履歴 */}
           <div className="mt-4">
-            <div className="font-bold text-gray-800 mb-2">交代履歴</div>
+           <div className="flex items-center justify-between mb-2">
+  <div className="font-bold text-gray-800">交代履歴</div>
+
+  <button
+    onClick={deleteLastSubstitution}
+    className="px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700"
+  >
+    最後の交代を削除
+  </button>
+</div>
             {(currentSetData.substitutions || []).length === 0 ? (
               <div className="text-sm text-gray-500">まだ交代はありません</div>
             ) : (
