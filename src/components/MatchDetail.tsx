@@ -555,7 +555,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                             <input
                               value={editingPlayerName}
                               onChange={(e) => setEditingPlayerName(e.target.value)}
-                              className="flex-1 px-2 py-1 border rounded text-sm"
+                              className="w-[5rem] px-2 py-1 border rounded text-sm"
                               placeholder="選手名"
                             />
                             <button
@@ -577,7 +577,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                               <div className="text-sm md:text-base font-bold text-gray-800 truncate">
                                 {player.name || '(未入力)'}
                               </div>
-                              <div className="text-xs text-gray-500">#{player.number}</div>
                             </div>
                             <button
                               onClick={() => startEditingPlayer(player)}
