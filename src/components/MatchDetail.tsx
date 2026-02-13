@@ -554,7 +554,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
                     return (
                       <tr key={player.id} className={idx % 2 === 0 ? 'bg-purple-50' : 'bg-white'}>
-                        <td className="border-2 border-gray-300 px-2 py-2 align-top sticky left-0 bg-inherit min-w-[180px]">
+                      <td className="border-2 border-gray-300 px-2 py-2 align-top sticky left-0 bg-inherit w-[6.5rem] min-w-[6.5rem] max-w-[6.5rem]">
                           {isEditing ? (
                             <div className="space-y-2">
                               <input
@@ -711,7 +711,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                 <tbody>
                   {allSetTotalsByPlayer.map((row, idx) => (
                     <tr key={row.id} className={idx % 2 === 0 ? 'bg-purple-50' : 'bg-white'}>
-                      <td className="border-2 border-gray-300 px-3 py-2 font-semibold text-sm md:text-base sticky left-0 bg-inherit">
+                     <td className="border-2 border-gray-300 px-3 py-2 font-semibold text-sm md:text-base sticky left-0 bg-inherit w-[6.5rem] min-w-[6.5rem] max-w-[6.5rem]">
                         {row.name || '(未入力)'}
                       </td>
                       {keysInOrder.map((c) => (
