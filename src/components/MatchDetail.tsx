@@ -261,14 +261,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         opponentScore: set.opponentScore,
       });
 
-      // コート上(先頭6人)の outPlayer を inPlayer に置換（見た目上の反映）
-      const nextPlayers = [...players];
-      const outIndex = nextPlayers.findIndex((p) => p.id === outPlayer.id);
-      if (outIndex >= 0) {
-        nextPlayers[outIndex] = { ...inPlayer! };
-      }
-
-      return { ...set, players: nextPlayers, substitutions };
+    // OUT は残す（置換しない）
+// IN は上で players.push(inPlayer!) 済み（末尾に追加）
+return { ...set, players, substitutions };
     });
 
     onUpdate({ ...match, sets: updatedSets });
