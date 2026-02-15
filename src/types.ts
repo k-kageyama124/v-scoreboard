@@ -71,6 +71,8 @@ export interface MatchSet {
 
   // v6追加：入力表用ログ（セットごと）
   statActions?: StatAction[];
+  // v7相当：コート内（最大6）を保持。空席は null
+  courtPlayerIds?: Array<string | null>;
 }
 
 export interface Match {
