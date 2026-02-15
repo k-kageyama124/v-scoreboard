@@ -212,169 +212,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     onUpdate({ ...match, sets: updatedSets });
   };
 
-  // 交代：OUT は先頭6人のみから選択、IN は入力名
-  const handleSubstitution = () => {
-    if (!currentSetData) return;
-
-    const outCandidates: Player[] = (currentSetData.players || []).slice(0, 6);
-    const outPlayer: Player | null =
-      benchPlayerId ? outCandidates.find((p) => p.id === benchPlayerId) || null : null;
-
-    if (!outPlayer) {
-      alert('交代する選手（OUT）を選択してください（先頭6人のみ）');
-      return;
-    }
-
-    const trimmedInName = inPlayerName.trim();
-    if (!trimmedInName) {
-      alert('入る選手（IN）の名前を入力してください');
-      return;
-    }
-
-    // 既に同名がいるならそれを使う（任意：同名を許容しないならここを変更）
-    let inPlayer: Player | null =
-      (currentSetData.players || []).find((p: Player) => (p.name || '').trim() === trimmedInName) || null;
-
-    if (!inPlayer) {
-      inPlayer = {
-        id: `player-${Date.now()}`,
-        name: trimmedInName,
-        number: (currentSetData.players?.length || 0) + 1,
-      };
-    }
-
-    const updatedSets = match.sets.map((set: any, idx: number) => {
-      if (idx !== currentSetIndex) return set;
-
-      const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
-      // IN がまだ players にいないなら末尾に追加（append-only）
-      if (!players.some((p) => p.id === inPlayer!.id)) {
-        players.push(inPlayer!);
-      }
-
-      const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
-      substitutions.push({
-        outPlayer: outPlayer.id,
-        inPlayer: inPlayer!.id,
-        timestamp: Date.now(),
-        ourScore: set.ourScore,
-        opponentScore: set.opponentScore,
-      });
-
-    // OUT は残す（置換しない）
-// IN は上で players.push(inPlayer!) 済み（末尾に追加）
-return { ...set, players, substitutions };
-    });
-
-    onUpdate({ ...match, sets: updatedSets });
-
-    // UIリセット
-    setBenchPlayerId('');
-    setInPlayerName('');
-  };
-// 交代履歴：最後の1件だけ削除（安全運用）
-  const deleteLastSubstitution = () => {
-    if (!currentSetData) return;
-
-    const setSubstitutions = Array.isArray(currentSetData.substitutions)
-      ? currentSetData.substitutions
-      : [];
-
-    if (setSubstitutions.length === 0) {
-      alert('削除できる交代履歴がありません');
-      return;
-    }
-
-    if (!confirm('最後の交代を削除しますか？（このセットのみ）')) return;
-
-    const updatedSets = match.sets.map((set: any, idx: number) => {
-      if (idx !== currentSetIndex) return set;
-
-      const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
-      substitutions.pop(); // 最後だけ削除
-
-      // A方式：指摘以外は変えない方針なので players（コート6人）は触らない
-      return { ...set, substitutions };
-    });
-
-    onUpdate({ ...match, sets: updatedSets });
-  };
-   // 同名重複を修正（現在セットのみ）：古い方（先に出てくる方）を残す
-  const fixDuplicatePlayersInCurrentSet = () => {
-    if (!currentSetData) return;
-
-    if (!confirm('同名の重複選手を統合します（このセットのみ）。よろしいですか？')) return;
-
-    const updatedSets = match.sets.map((set: any, idx: number) => {
-      if (idx !== currentSetIndex) return set;
-
-      const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
-      const statActions: StatAction[] = Array.isArray(set.statActions) ? [...set.statActions] : [];
-      const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
-
-      // name(trim) -> keepId（最初に出てきたID）
-      const keepIdByName = new Map<string, string>();
-      // duplicateId -> keepId
-      const redirect = new Map<string, string>();
-
-      players.forEach((p) => {
-        const key = (p.name || '').trim();
-        if (!key) return; // 未入力は統合しない
-        if (!keepIdByName.has(key)) {
-          keepIdByName.set(key, p.id);
-        } else {
-          redirect.set(p.id, keepIdByName.get(key)!);
-        }
-      });
-
-      // リダイレクトが無ければ何もしない
-      if (redirect.size === 0) return set;
-
-      // players から重複IDを除外（keepId は残す）
-      const nextPlayers = players.filter((p) => !redirect.has(p.id));
-
-      // statActions の playerId を寄せる
-      const nextStatActions = statActions.map((a) => {
-        const to = redirect.get(a.playerId);
-        return to ? { ...a, playerId: to } : a;
-      });
-
-      // substitutions の out/in も寄せる
-      const nextSubstitutions = substitutions.map((s: any) => ({
-        ...s,
-        outPlayer: redirect.get(s.outPlayer) || s.outPlayer,
-        inPlayer: redirect.get(s.inPlayer) || s.inPlayer,
-      }));
-
-      return {
-        ...set,
-        players: nextPlayers,
-        statActions: nextStatActions,
-        substitutions: nextSubstitutions,
-      };
-    });
-
-    onUpdate({ ...match, sets: updatedSets });
-  };
-  const startEditingPlayer = (player: Player) => {
-    setEditingPlayerId(player.id);
-    setEditingPlayerName(player.name || '');
-  };
-
-  const savePlayerName = () => {
-    if (!editingPlayerId) return;
-
-    const updatedSets = match.sets.map((set: any) => {
-      const players: Player[] = Array.isArray(set.players) ? set.players : [];
-      const nextPlayers = players.map((p) => (p.id === editingPlayerId ? { ...p, name: editingPlayerName } : p));
-      return { ...set, players: nextPlayers };
-    });
-
-    onUpdate({ ...match, sets: updatedSets });
-    setEditingPlayerId(null);
-    setEditingPlayerName('');
-  };
-
+undefined
   const cancelEditing = () => {
     setEditingPlayerId(null);
     setEditingPlayerName('');
@@ -631,36 +469,21 @@ return { ...set, players, substitutions };
                               </div>
                             </div>
                             <button
-                              onClick={() => startEditingPlayer(player)}
-                              className="shrink-0 w-[3.5rem] px-2 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95"
-                              title="選手名編集"
-                            >
-                              編集
-                            </button>
-                          </div>
-                        )}
-                      </td>
+                           <button
+  onClick={() => startEditingPlayer(player)}
+  className="shrink-0 w-[3.5rem] px-2 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95"
+  title="選手名編集"
+>
+  編集
+</button>
 
-                      {/* 入力セル */}
-                      {STAT_KEYS.map((k) => {
-                        const v = totals[k];
-                        return (
-                          <td
-                            key={k}
-                            onClick={() => tapCell(player.id, k)}
-                            className="border-2 border-gray-300 px-2 py-2 text-center select-none cursor-pointer active:bg-yellow-100"
-                          >
-                            <span className="text-lg font-bold">{v === 0 ? '' : v}</span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
+<button
+  onClick={() => deletePlayerHard(player.id)}
+  className="shrink-0 px-2 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 active:scale-95"
+  title="選手を削除（このセットの記録・交代履歴も削除）"
+>
+  削除
+</button>
           {/* 凡例 */}
           <div className="mt-4 text-sm text-gray-700 bg-gray-50 rounded-xl p-3">
             <div className="font-bold mb-1">記号の意味</div>
