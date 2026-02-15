@@ -650,34 +650,34 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => startEditingPlayer(player)}
-                                className="shrink-0 w-[3.5rem] px-2 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95"
-                                title="選手名編集"
-                              >
-                                編集
-                              </button>
+                       <div className="flex items-center gap-1 shrink-0">
+  <button
+    onClick={() => startEditingPlayer(player)}
+    className="shrink-0 w-8 h-8 grid place-items-center bg-blue-500 text-white rounded-md text-xs font-bold active:scale-95"
+    title="選手名編集"
+  >
+    編
+  </button>
 
-                              {/* (3) 誤タップ防止：削除→確定の2段階 */}
-                              {confirmDeletePlayerId === player.id ? (
-                                <button
-                                  onClick={() => deletePlayerHard(player.id)}
-                                  className="shrink-0 px-2 py-2 bg-red-700 text-white rounded-lg text-xs font-bold hover:bg-red-800 active:scale-95"
-                                  title="もう一度押すと削除確定"
-                                >
-                                  確定
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => setConfirmDeletePlayerId(player.id)}
-                                  className="shrink-0 px-2 py-2 bg-red-200 text-red-800 rounded-lg text-xs font-bold hover:bg-red-300 active:scale-95"
-                                  title="押し間違い防止：次で確定"
-                                >
-                                  削除
-                                </button>
-                              )}
-                            </div>
+  {/* 誤タップ防止：削→確 の2段階 */}
+  {confirmDeletePlayerId === player.id ? (
+    <button
+      onClick={() => deletePlayerHard(player.id)}
+      className="shrink-0 w-8 h-8 grid place-items-center bg-red-700 text-white rounded-md text-xs font-bold hover:bg-red-800 active:scale-95"
+      title="もう一度押すと削除確定"
+    >
+      確
+    </button>
+  ) : (
+    <button
+      onClick={() => setConfirmDeletePlayerId(player.id)}
+      className="shrink-0 w-8 h-8 grid place-items-center bg-red-200 text-red-800 rounded-md text-xs font-bold hover:bg-red-300 active:scale-95"
+      title="押し間違い防止：次で確定"
+    >
+      削
+    </button>
+  )}
+</div>
                           </div>
                         )}
                       </td>
