@@ -267,17 +267,19 @@ undefined
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
         <div className="max-w-6xl mx-auto">
           <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-          >
-            <ArrowLeft size={20} />
-            <span>戻る</span>
-          </button>
-          <p className="mt-6 text-gray-600">セットデータがありません。</p>
-        </div>
+              <button
+          onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        >
+          <ArrowLeft size={20} />
+          <span>戻る</span>
+        </button>
+
+        <p className="mt-6 text-gray-600">セットデータがありません。</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   const outCandidates: Player[] = (currentSetData.players || []).slice(0, 6);
 
