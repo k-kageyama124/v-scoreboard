@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Save, UserPlus, Users, Edit2 } from 'lucide-react';
+import { ArrowLeft, Save, UserPlus, Users } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { Match, Player, StatAction, StatKey } from '../types';
 
@@ -47,7 +47,6 @@ function getOrInitStatActions(set: any): StatAction[] {
  */
 function buildAction(playerId: string, primary: StatKey): StatAction {
   const deltas: Partial<Record<StatKey, number>> = { [primary]: 1 };
-
   if (primary === 'SP') deltas.S = (deltas.S || 0) + 1;
   if (primary === 'AP' || primary === 'AM') deltas.A = (deltas.A || 0) + 1;
 
@@ -80,8 +79,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [initialized, setInitialized] = useState(false);
 
-  // 交代
-  // benchPlayerId という名前のまま使うが、意味は「OUT選手ID」
+  // 交代（benchPlayerId = OUT選手ID）
   const [benchPlayerId, setBenchPlayerId] = useState<string>('');
   const [inPlayerName, setInPlayerName] = useState<string>('');
 
@@ -89,7 +87,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingPlayerName, setEditingPlayerName] = useState<string>('');
 
-  // 初期化：セット/選手が無い場合に生成
+  // 初期化
   useEffect(() => {
     if (initialized) return;
 
@@ -108,7 +106,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       ] as any;
     }
 
-    // 6人いないなら作る（既存仕様踏襲）
     const firstSet: any = updatedMatch.sets[0];
     if (!firstSet.players || firstSet.players.length === 0) {
       const players: Player[] = Array.from({ length: 6 }).map((_, idx) => ({
@@ -119,7 +116,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       firstSet.players = players;
     }
 
-    // statActions を全セットに必ず用意
     updatedMatch.sets = updatedMatch.sets.map((s: any) => ({
       ...s,
       statActions: getOrInitStatActions(s),
@@ -130,8 +126,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     }));
 
     setInitialized(true);
-
-    // match を mutate しないために更新
     onUpdate(updatedMatch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized]);
@@ -141,13 +135,11 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const handleSetChange = (index: number) => {
     if (!match.sets) return;
 
-    // 既存セットへ切替
     if (index < match.sets.length) {
       setCurrentSetIndex(index);
       return;
     }
 
-    // 無ければ新規セット追加（前セットの players を引き継ぐ）
     const prevSet: any = match.sets[match.sets.length - 1];
     const newSet: any = {
       ourScore: 0,
@@ -159,11 +151,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       statActions: [],
     };
 
-    const updatedMatch: Match = {
-      ...match,
-      sets: [...match.sets, newSet],
-    };
-
+    const updatedMatch: Match = { ...match, sets: [...match.sets, newSet] };
     onUpdate(updatedMatch);
     setCurrentSetIndex(index);
   };
@@ -201,8 +189,18 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   // 入力表：1つ戻る（セット単位 / 入力表だけ）
   const undoLastStatAction = () => {
     if (!currentSetData) return;
-  // 交代：OUT は先頭6人のみから選択、IN は入力名
-  // 方針A: 先頭6人＝常にコート内 → OUT を IN で置換してコートを入れ替える
+
+    const updatedSets = match.sets.map((set: any, idx: number) => {
+      if (idx !== currentSetIndex) return set;
+      const statActions = [...getOrInitStatActions(set)];
+      statActions.pop();
+      return { ...set, statActions };
+    });
+
+    onUpdate({ ...match, sets: updatedSets });
+  };
+
+  // 交代（A方式：先頭6人＝コート内 → OUTをINに置換）
   const handleSubstitution = () => {
     if (!currentSetData) return;
 
@@ -221,7 +219,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       return;
     }
 
-    // 既に同名がいるならそれを使う（任意：同名を許容しないならここを変更）
     let inPlayer: Player | null =
       (currentSetData.players || []).find((p: Player) => (p.name || '').trim() === trimmedInName) || null;
 
@@ -238,10 +235,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
       const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
 
-      // IN がまだ players にいないなら末尾に追加（append-only）
-      if (!players.some((p) => p.id === inPlayer!.id)) {
-        players.push(inPlayer!);
-      }
+      // IN が未登録なら末尾に追加
+      if (!players.some((p) => p.id === inPlayer!.id)) players.push(inPlayer!);
 
       const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
       substitutions.push({
@@ -252,32 +247,25 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         opponentScore: set.opponentScore,
       });
 
-      // コート上(先頭6人)の outPlayer を inPlayer に置換（見た目上の反映）
+      // コート内（先頭6人）を入れ替え
       const nextPlayers = [...players];
       const outIndex = nextPlayers.findIndex((p) => p.id === outPlayer.id);
-      if (outIndex >= 0) {
-        nextPlayers[outIndex] = { ...inPlayer! };
-      }
+      if (outIndex >= 0) nextPlayers[outIndex] = { ...inPlayer! };
 
       return { ...set, players: nextPlayers, substitutions };
     });
 
     onUpdate({ ...match, sets: updatedSets });
-
-    // UIリセット
     setBenchPlayerId('');
     setInPlayerName('');
   };
 
-  // 交代履歴：最後の1件だけ削除（安全運用）
+  // 交代履歴：最後の1件だけ削除（このセットのみ）
   const deleteLastSubstitution = () => {
     if (!currentSetData) return;
 
-    const setSubstitutions = Array.isArray(currentSetData.substitutions)
-      ? currentSetData.substitutions
-      : [];
-
-    if (setSubstitutions.length === 0) {
+    const subs = Array.isArray(currentSetData.substitutions) ? currentSetData.substitutions : [];
+    if (subs.length === 0) {
       alert('削除できる交代履歴がありません');
       return;
     }
@@ -286,21 +274,17 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
     const updatedSets = match.sets.map((set: any, idx: number) => {
       if (idx !== currentSetIndex) return set;
-
       const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
-      substitutions.pop(); // 最後だけ削除
-
-      // players（コート6人）は触らない（最小変更）
+      substitutions.pop();
       return { ...set, substitutions };
     });
 
     onUpdate({ ...match, sets: updatedSets });
   };
 
-  // 同名重複を修正（現在セットのみ）：古い方（先に出てくる方）を残す
+  // 同名重複を修正（このセットのみ）：古い方（先に出る方）を残す
   const fixDuplicatePlayersInCurrentSet = () => {
     if (!currentSetData) return;
-
     if (!confirm('同名の重複選手を統合します（このセットのみ）。よろしいですか？')) return;
 
     const updatedSets = match.sets.map((set: any, idx: number) => {
@@ -315,7 +299,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
       players.forEach((p) => {
         const key = (p.name || '').trim();
-        if (!key) return; // 未入力は統合しない
+        if (!key) return;
         if (!keepIdByName.has(key)) keepIdByName.set(key, p.id);
         else redirect.set(p.id, keepIdByName.get(key)!);
       });
@@ -323,12 +307,10 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       if (redirect.size === 0) return set;
 
       const nextPlayers = players.filter((p) => !redirect.has(p.id));
-
       const nextStatActions = statActions.map((a) => {
         const to = redirect.get(a.playerId);
         return to ? { ...a, playerId: to } : a;
       });
-
       const nextSubstitutions = substitutions.map((s: any) => ({
         ...s,
         outPlayer: redirect.get(s.outPlayer) || s.outPlayer,
@@ -341,16 +323,14 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     onUpdate({ ...match, sets: updatedSets });
   };
 
-  // 選手を完全削除（方式H）：players / statActions / substitutions から除去（現在セットのみ）
+  // 選手を完全削除（方式H）：このセットのみ（players/statActions/substitutionsから除去）
   const deletePlayerHard = (playerId: string) => {
     if (!currentSetData) return;
 
     const player = (currentSetData.players || []).find((p: Player) => p.id === playerId);
     const name = (player?.name || '').trim() || '(未入力)';
 
-    if (!confirm(`「${name}」を削除します。\nこのセットの記録・交代履歴からも削除されます。よろしいですか？`)) {
-      return;
-    }
+    if (!confirm(`「${name}」を削除します。\nこのセットの記録・交代履歴からも削除されます。よろしいですか？`)) return;
 
     const updatedSets = match.sets.map((set: any, idx: number) => {
       if (idx !== currentSetIndex) return set;
@@ -361,9 +341,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
       const nextPlayers = players.filter((p) => p.id !== playerId);
       const nextStatActions = statActions.filter((a) => a.playerId !== playerId);
-      const nextSubstitutions = substitutions.filter(
-        (s: any) => s.outPlayer !== playerId && s.inPlayer !== playerId
-      );
+      const nextSubstitutions = substitutions.filter((s: any) => s.outPlayer !== playerId && s.inPlayer !== playerId);
 
       return { ...set, players: nextPlayers, statActions: nextStatActions, substitutions: nextSubstitutions };
     });
@@ -389,28 +367,19 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setEditingPlayerId(null);
     setEditingPlayerName('');
   };
-    const updatedSets = match.sets.map((set: any, idx: number) => {
-      if (idx !== currentSetIndex) return set;
-      const statActions = [...getOrInitStatActions(set)];
-      statActions.pop();
-      return { ...set, statActions };
-    });
-
-    onUpdate({ ...match, sets: updatedSets });
-  };
 
   const cancelEditing = () => {
     setEditingPlayerId(null);
     setEditingPlayerName('');
   };
 
-  // 現在セットの表示用合計（actions → totals）
+  // 現在セットの表示用合計
   const currentTotalsByPlayer = useMemo(() => {
     const actions = getOrInitStatActions(currentSetData || {});
     return totalsFromActions(actions);
   }, [currentSetData]);
 
-  // 全セット合算（actions 全部を合算）
+  // 全セット合算
   const aggregatedTotalsByPlayer = useMemo(() => {
     const map: Record<string, StatTotals> = {};
     (match.sets || []).forEach((set: any) => {
@@ -424,7 +393,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     return map;
   }, [match.sets]);
 
-  // 全セットで登場した players（表示用にユニーク化）
   const allPlayers = useMemo(() => {
     const seen = new Map<string, Player>();
     (match.sets || []).forEach((set: any) => {
@@ -438,17 +406,19 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const saveAsImage = async () => {
     const el = document.getElementById('match-detail-capture');
     if (!el) return;
+
     const canvas = await html2canvas(el as HTMLElement, {
       scale: 2,
       backgroundColor: null,
     });
+
     const link = document.createElement('a');
     link.download = `match_${match.id}_set${currentSetIndex + 1}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   };
 
-     if (!currentSetData) {
+  if (!currentSetData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
         <div className="max-w-6xl mx-auto">
@@ -592,7 +562,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           </div>
         </div>
 
-              {/* 入力表（マス目） */}
+        {/* 入力表（マス目） */}
         <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-gray-800">選手記録（入力表）</h2>
@@ -625,7 +595,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
                   return (
                     <tr key={player.id} className={idx < 6 ? 'bg-white' : 'bg-gray-50'}>
-                      {/* 名前セル（sticky） */}
                       <td className="border-2 border-gray-300 px-2 py-2 align-top sticky left-0 bg-inherit z-10 w-[10rem] min-w-[10rem] max-w-[10rem]">
                         {editingPlayerId === player.id ? (
                           <div className="flex items-center gap-2">
@@ -664,7 +633,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                               >
                                 編集
                               </button>
-
                               <button
                                 onClick={() => deletePlayerHard(player.id)}
                                 className="shrink-0 px-2 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 active:scale-95"
@@ -677,7 +645,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                         )}
                       </td>
 
-                      {/* 入力セル */}
                       {STAT_KEYS.map((k) => {
                         const v = totals[k];
                         return (
@@ -697,7 +664,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </table>
           </div>
 
-          {/* 凡例 */}
           <div className="mt-4 text-sm text-gray-700 bg-gray-50 rounded-xl p-3">
             <div className="font-bold mb-1">記号の意味</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
@@ -754,43 +720,49 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </button>
           </div>
 
-        <div className="flex items-center justify-between mb-2">
-  <div className="font-bold text-gray-800">交代履歴</div>
+          {/* 交代履歴 */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-bold text-gray-800">交代履歴</div>
 
-  <div className="flex items-center gap-2">
-    <button
-      onClick={fixDuplicatePlayersInCurrentSet}
-      className="px-3 py-2 rounded-lg bg-gray-700 text-white text-xs font-bold hover:bg-gray-800"
-    >
-      重複を修正
-    </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fixDuplicatePlayersInCurrentSet}
+                  className="px-3 py-2 rounded-lg bg-gray-700 text-white text-xs font-bold hover:bg-gray-800"
+                >
+                  重複を修正
+                </button>
 
-    <button
-      onClick={deleteLastSubstitution}
-      className="px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700"
-    >
-      最後の交代を削除
-    </button>
-  </div>
-</div>
+                <button
+                  onClick={deleteLastSubstitution}
+                  className="px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700"
+                >
+                  最後の交代を削除
+                </button>
+              </div>
+            </div>
+
             {(currentSetData.substitutions || []).length === 0 ? (
               <div className="text-sm text-gray-500">まだ交代はありません</div>
             ) : (
               <div className="space-y-2">
-                {(currentSetData.substitutions || []).slice().reverse().map((s: any, i: number) => {
-                  const outP = (currentSetData.players || []).find((p: Player) => p.id === s.outPlayer);
-                  const inP = (currentSetData.players || []).find((p: Player) => p.id === s.inPlayer);
-                  return (
-                    <div key={`${s.timestamp}-${i}`} className="text-sm bg-gray-50 rounded-lg p-2">
-                      <span className="font-bold">{outP?.name || '(OUT未入力)'}</span>
-                      <span className="mx-2">→</span>
-                      <span className="font-bold">{inP?.name || '(IN未入力)'}</span>
-                      <span className="ml-3 text-gray-500">
-                        ({s.ourScore ?? currentSetData.ourScore}-{s.opponentScore ?? currentSetData.opponentScore})
-                      </span>
-                    </div>
-                  );
-                })}
+                {(currentSetData.substitutions || [])
+                  .slice()
+                  .reverse()
+                  .map((s: any, i: number) => {
+                    const outP = (currentSetData.players || []).find((p: Player) => p.id === s.outPlayer);
+                    const inP = (currentSetData.players || []).find((p: Player) => p.id === s.inPlayer);
+                    return (
+                      <div key={`${s.timestamp}-${i}`} className="text-sm bg-gray-50 rounded-lg p-2">
+                        <span className="font-bold">{outP?.name || '(OUT未入力)'}</span>
+                        <span className="mx-2">→</span>
+                        <span className="font-bold">{inP?.name || '(IN未入力)'}</span>
+                        <span className="ml-3 text-gray-500">
+                          ({s.ourScore ?? currentSetData.ourScore}-{s.opponentScore ?? currentSetData.opponentScore})
+                        </span>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -835,10 +807,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
             </table>
           </div>
 
-          <div className="mt-3 text-xs text-gray-500">
-            ※ 全セットの入力表（statActions）を合算しています
-          </div>
+          <div className="mt-3 text-xs text-gray-500">※ 全セットの入力表（statActions）を合算しています</div>
         </div>
       </div>
+    </div>
   );
 }
