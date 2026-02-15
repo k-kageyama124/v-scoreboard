@@ -262,24 +262,23 @@ undefined
     link.click();
   };
 
-  if (!currentSetData) {
+    if (!currentSetData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
         <div className="max-w-6xl mx-auto">
           <button
-              <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-        >
-          <ArrowLeft size={20} />
-          <span>戻る</span>
-        </button>
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+          >
+            <ArrowLeft size={20} />
+            <span>戻る</span>
+          </button>
 
-        <p className="mt-6 text-gray-600">セットデータがありません。</p>
+          <p className="mt-6 text-gray-600">セットデータがありません。</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   const outCandidates: Player[] = (currentSetData.players || []).slice(0, 6);
 
@@ -471,7 +470,6 @@ undefined
                               </div>
                             </div>
                             <button
-                           <button
   onClick={() => startEditingPlayer(player)}
   className="shrink-0 w-[3.5rem] px-2 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95"
   title="選手名編集"
