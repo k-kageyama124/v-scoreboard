@@ -40,6 +40,13 @@ function getOrInitStatActions(set: any): StatAction[] {
   return Array.isArray(set.statActions) ? set.statActions : [];
 }
 
+function normalizeCourtIds(set: any): Array<string | null> {
+  const raw = Array.isArray(set.courtPlayerIds) ? set.courtPlayerIds : [];
+  const arr: Array<string | null> = raw.slice(0, 6).map((x: any) => (typeof x === 'string' ? x : null));
+  while (arr.length < 6) arr.push(null);
+  return arr;
+}
+
 /**
  * 連動ルール:
  * - SP を押したら S も +1
@@ -79,7 +86,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [initialized, setInitialized] = useState(false);
 
-  // 交代（benchPlayerId = OUT選手ID）
+  // 交代（OUT選手ID / IN選手名）
   const [benchPlayerId, setBenchPlayerId] = useState<string>('');
   const [inPlayerName, setInPlayerName] = useState<string>('');
 
@@ -87,7 +94,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingPlayerName, setEditingPlayerName] = useState<string>('');
 
-  // (3) 削除ボタン誤タップ防止（2段階）
+  // 削除ボタン誤タップ防止（2段階）
   const [confirmDeletePlayerId, setConfirmDeletePlayerId] = useState<string | null>(null);
 
   // 初期化
@@ -105,11 +112,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
           receives: [],
           substitutions: [],
           statActions: [],
+          courtPlayerIds: [null, null, null, null, null, null],
         },
       ] as any;
     }
 
     const firstSet: any = updatedMatch.sets[0];
+
     if (!firstSet.players || firstSet.players.length === 0) {
       const players: Player[] = Array.from({ length: 6 }).map((_, idx) => ({
         id: `player-${Date.now()}-${idx}`,
@@ -119,6 +128,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       firstSet.players = players;
     }
 
+    // courtPlayerIds が無ければ「先頭6人」を初期コートにする（空名でもOK）
+    if (!Array.isArray(firstSet.courtPlayerIds) || firstSet.courtPlayerIds.length === 0) {
+      const ids = (firstSet.players || []).slice(0, 6).map((p: Player) => p.id);
+      firstSet.courtPlayerIds = [...ids];
+      while (firstSet.courtPlayerIds.length < 6) firstSet.courtPlayerIds.push(null);
+    }
+
     updatedMatch.sets = updatedMatch.sets.map((s: any) => ({
       ...s,
       statActions: getOrInitStatActions(s),
@@ -126,6 +142,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       serves: Array.isArray(s.serves) ? s.serves : [],
       receives: Array.isArray(s.receives) ? s.receives : [],
       players: Array.isArray(s.players) ? s.players : [],
+      courtPlayerIds: normalizeCourtIds(s),
     }));
 
     setInitialized(true);
@@ -134,6 +151,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   }, [initialized]);
 
   const currentSetData: any = match.sets?.[currentSetIndex];
+
+  const courtIds = useMemo(() => normalizeCourtIds(currentSetData || {}), [currentSetData]);
+  const isOnCourt = (playerId: string) => courtIds.includes(playerId);
 
   const handleSetChange = (index: number) => {
     if (!match.sets) return;
@@ -152,6 +172,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       receives: [],
       substitutions: [],
       statActions: [],
+      // 新セットは「前セットのコート」を引き継ぐ（空席含む）
+      courtPlayerIds: normalizeCourtIds(prevSet || {}),
     };
 
     const updatedMatch: Match = { ...match, sets: [...match.sets, newSet] };
@@ -203,16 +225,13 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     onUpdate({ ...match, sets: updatedSets });
   };
 
-  // 交代（A方式：先頭6人＝コート内 → OUTをINに置換）
+  // 交代：OUT はコート内のみ、IN は名簿末尾に追加。コートは入れ替え（空席方式）
   const handleSubstitution = () => {
     if (!currentSetData) return;
 
-    const outCandidates: Player[] = (currentSetData.players || []).slice(0, 6);
-    const outPlayer: Player | null =
-      benchPlayerId ? outCandidates.find((p) => p.id === benchPlayerId) || null : null;
-
-    if (!outPlayer) {
-      alert('交代する選手（OUT）を選択してください（先頭6人のみ）');
+    const outId = benchPlayerId;
+    if (!outId) {
+      alert('交代する選手（OUT）を選択してください（コート内のみ）');
       return;
     }
 
@@ -222,46 +241,68 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       return;
     }
 
-    let inPlayer: Player | null =
-      (currentSetData.players || []).find((p: Player) => (p.name || '').trim() === trimmedInName) || null;
-
-    if (!inPlayer) {
-      inPlayer = {
-        id: `player-${Date.now()}`,
-        name: trimmedInName,
-        number: (currentSetData.players?.length || 0) + 1,
-      };
-    }
-
     const updatedSets = match.sets.map((set: any, idx: number) => {
       if (idx !== currentSetIndex) return set;
 
       const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
+      const courtPlayerIds: Array<string | null> = normalizeCourtIds(set);
 
-      if (!players.some((p) => p.id === inPlayer!.id)) players.push(inPlayer!);
+      // OUT は必ずコート内から選ぶ（念のためチェック）
+      if (!courtPlayerIds.includes(outId)) {
+        alert('OUT はコート内の選手から選択してください');
+        return set;
+      }
 
+      // IN は「同名が既にいるならそれ」を優先して使う（名簿重複回避）
+      let inPlayer: Player | null =
+        players.find((p: Player) => (p.name || '').trim() === trimmedInName) || null;
+
+      if (!inPlayer) {
+        inPlayer = {
+          id: `player-${Date.now()}`,
+          name: trimmedInName,
+          number: (players.length || 0) + 1,
+        };
+        // 名簿末尾に追加
+        players.push(inPlayer);
+      } else {
+        // 既存選手でも「名簿の末尾に追加」はしない（同一IDを重複させない）
+        // コートには入れるだけ
+      }
+
+      // substitutions に記録
       const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
       substitutions.push({
-        outPlayer: outPlayer.id,
-        inPlayer: inPlayer!.id,
+        outPlayer: outId,
+        inPlayer: inPlayer.id,
         timestamp: Date.now(),
         ourScore: set.ourScore,
         opponentScore: set.opponentScore,
       });
 
-      const nextPlayers = [...players];
-      const outIndex = nextPlayers.findIndex((p) => p.id === outPlayer.id);
-      if (outIndex >= 0) nextPlayers[outIndex] = { ...inPlayer! };
+      // コート入れ替え：OUT の位置を IN に置換（空席方式なので OUT は名簿に残るだけ）
+      const nextCourt = [...courtPlayerIds];
+      const outIndex = nextCourt.findIndex((id) => id === outId);
+      if (outIndex >= 0) {
+        nextCourt[outIndex] = inPlayer.id;
+      }
 
-      return { ...set, players: nextPlayers, substitutions };
+      return {
+        ...set,
+        players,
+        substitutions,
+        courtPlayerIds: nextCourt,
+      };
     });
 
     onUpdate({ ...match, sets: updatedSets });
+
+    // UIリセット
     setBenchPlayerId('');
     setInPlayerName('');
   };
 
-  // (2) 交代履歴：最後の1件だけ削除（このセットのみ）＋コート内も1手戻す
+  // 交代履歴：最後の1件だけ削除（このセットのみ）＋コートも戻す
   const deleteLastSubstitution = () => {
     if (!currentSetData) return;
 
@@ -277,29 +318,26 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       if (idx !== currentSetIndex) return set;
 
       const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
-      const popped = substitutions.pop(); // 最後の交代
+      const popped = substitutions.pop();
+      if (!popped) return set;
 
-      const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
-      if (!popped) return { ...set, players, substitutions };
+      const courtPlayerIds: Array<string | null> = normalizeCourtIds(set);
+      const nextCourt = [...courtPlayerIds];
 
-      const outId = popped.outPlayer;
+      // popped: outPlayer -> inPlayer を戻す（コート内で inPlayer を探して outPlayer に戻す）
       const inId = popped.inPlayer;
+      const outId = popped.outPlayer;
 
-      const outP = players.find((p) => p.id === outId) || null;
-      const nextPlayers = [...players];
+      const idxInCourt = nextCourt.findIndex((id) => id === inId);
+      if (idxInCourt >= 0) nextCourt[idxInCourt] = outId;
 
-      const idxInCourt = nextPlayers.slice(0, 6).findIndex((p) => p.id === inId);
-      if (idxInCourt >= 0 && outP) {
-        nextPlayers[idxInCourt] = { ...outP };
-      }
-
-      return { ...set, players: nextPlayers, substitutions };
+      return { ...set, substitutions, courtPlayerIds: nextCourt };
     });
 
     onUpdate({ ...match, sets: updatedSets });
   };
 
-  // 同名重複を修正（このセットのみ）：古い方（先に出る方）を残す
+  // 同名重複を修正（このセットのみ）：古い方を残す。コートIDも寄せる
   const fixDuplicatePlayersInCurrentSet = () => {
     if (!currentSetData) return;
     if (!confirm('同名の重複選手を統合します（このセットのみ）。よろしいですか？')) return;
@@ -310,6 +348,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
       const statActions: StatAction[] = Array.isArray(set.statActions) ? [...set.statActions] : [];
       const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
+      const courtPlayerIds: Array<string | null> = normalizeCourtIds(set);
 
       const keepIdByName = new Map<string, string>();
       const redirect = new Map<string, string>();
@@ -324,33 +363,51 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       if (redirect.size === 0) return set;
 
       const nextPlayers = players.filter((p) => !redirect.has(p.id));
+
       const nextStatActions = statActions.map((a) => {
         const to = redirect.get(a.playerId);
         return to ? { ...a, playerId: to } : a;
       });
+
       const nextSubstitutions = substitutions.map((s: any) => ({
         ...s,
         outPlayer: redirect.get(s.outPlayer) || s.outPlayer,
         inPlayer: redirect.get(s.inPlayer) || s.inPlayer,
       }));
 
-      return { ...set, players: nextPlayers, statActions: nextStatActions, substitutions: nextSubstitutions };
+      const nextCourt = courtPlayerIds.map((id) => (id ? (redirect.get(id) || id) : null));
+
+      return {
+        ...set,
+        players: nextPlayers,
+        statActions: nextStatActions,
+        substitutions: nextSubstitutions,
+        courtPlayerIds: nextCourt,
+      };
     });
 
     onUpdate({ ...match, sets: updatedSets });
   };
 
-  // 選手を完全削除（方式H）：このセットのみ（players/statActions/substitutionsから除去）
+  // 選手を削除（方式Hだが行は残す）：このセットのみ
+  // - 名簿行は残す（player.name を空にする）
+  // - statActions/substitutions からは削除
+  // - コート内にいる場合は「空席」にする（あなたのA方式）
   const deletePlayerHard = (playerId: string) => {
     if (!currentSetData) return;
 
-    // (3) 削除確定状態をリセット
     setConfirmDeletePlayerId(null);
 
     const player = (currentSetData.players || []).find((p: Player) => p.id === playerId);
     const name = (player?.name || '').trim() || '(未入力)';
 
-    if (!confirm(`「${name}」を削除します。\nこのセットの記録・交代履歴からも削除されます。よろしいですか？`)) return;
+    if (
+      !confirm(
+        `「${name}」を削除します。\nこのセットの記録・交代履歴から削除し、名簿の行は残して空に戻します。\n（コート内なら空席になります）\nよろしいですか？`
+      )
+    ) {
+      return;
+    }
 
     const updatedSets = match.sets.map((set: any, idx: number) => {
       if (idx !== currentSetIndex) return set;
@@ -358,12 +415,20 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
       const statActions: StatAction[] = Array.isArray(set.statActions) ? [...set.statActions] : [];
       const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
+      const courtPlayerIds: Array<string | null> = normalizeCourtIds(set);
 
-      const nextPlayers = players.filter((p) => p.id !== playerId);
+      const nextPlayers = players.map((p) => (p.id === playerId ? { ...p, name: '' } : p));
       const nextStatActions = statActions.filter((a) => a.playerId !== playerId);
       const nextSubstitutions = substitutions.filter((s: any) => s.outPlayer !== playerId && s.inPlayer !== playerId);
+      const nextCourt = courtPlayerIds.map((id) => (id === playerId ? null : id));
 
-      return { ...set, players: nextPlayers, statActions: nextStatActions, substitutions: nextSubstitutions };
+      return {
+        ...set,
+        players: nextPlayers,
+        statActions: nextStatActions,
+        substitutions: nextSubstitutions,
+        courtPlayerIds: nextCourt,
+      };
     });
 
     onUpdate({ ...match, sets: updatedSets });
@@ -456,7 +521,8 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     );
   }
 
-  const outCandidates: Player[] = (currentSetData.players || []).slice(0, 6);
+  // OUT候補：コート内のみ（空席除外）
+  const outCandidates: Player[] = (currentSetData.players || []).filter((p: Player) => isOnCourt(p.id));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
@@ -610,15 +676,16 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
               </thead>
 
               <tbody>
-                {(currentSetData.players || []).map((player: Player, idx: number) => {
+                {(currentSetData.players || []).map((player: Player) => {
                   const totals = currentTotalsByPlayer[player.id] || emptyTotals();
+                  const onCourt = isOnCourt(player.id);
 
                   return (
-                    <tr key={player.id} className={idx < 6 ? 'bg-white' : 'bg-gray-50'}>
-                      {/* (1) コート内（先頭6人）は名前セルを水色 */}
+                    <tr key={player.id} className={onCourt ? 'bg-white' : 'bg-gray-50'}>
+                      {/* コート内は水色 */}
                       <td
                         className={`border-2 border-gray-300 px-2 py-2 align-top sticky left-0 z-10 w-[10rem] min-w-[10rem] max-w-[10rem] ${
-                          idx < 6 ? 'bg-sky-100' : 'bg-inherit'
+                          onCourt ? 'bg-sky-100' : 'bg-inherit'
                         }`}
                       >
                         {editingPlayerId === player.id ? (
@@ -650,34 +717,34 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                               </div>
                             </div>
 
-                       <div className="flex items-center gap-1 shrink-0">
-  <button
-    onClick={() => startEditingPlayer(player)}
-    className="shrink-0 w-8 h-8 grid place-items-center bg-blue-500 text-white rounded-md text-xs font-bold active:scale-95"
-    title="選手名編集"
-  >
-    編
-  </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => startEditingPlayer(player)}
+                                className="shrink-0 w-8 h-8 grid place-items-center bg-blue-500 text-white rounded-md text-xs font-bold active:scale-95"
+                                title="選手名編集"
+                              >
+                                編
+                              </button>
 
-  {/* 誤タップ防止：削→確 の2段階 */}
-  {confirmDeletePlayerId === player.id ? (
-    <button
-      onClick={() => deletePlayerHard(player.id)}
-      className="shrink-0 w-8 h-8 grid place-items-center bg-red-700 text-white rounded-md text-xs font-bold hover:bg-red-800 active:scale-95"
-      title="もう一度押すと削除確定"
-    >
-      確
-    </button>
-  ) : (
-    <button
-      onClick={() => setConfirmDeletePlayerId(player.id)}
-      className="shrink-0 w-8 h-8 grid place-items-center bg-red-200 text-red-800 rounded-md text-xs font-bold hover:bg-red-300 active:scale-95"
-      title="押し間違い防止：次で確定"
-    >
-      削
-    </button>
-  )}
-</div>
+                              {/* 誤タップ防止：削→確 の2段階 */}
+                              {confirmDeletePlayerId === player.id ? (
+                                <button
+                                  onClick={() => deletePlayerHard(player.id)}
+                                  className="shrink-0 w-8 h-8 grid place-items-center bg-red-700 text-white rounded-md text-xs font-bold hover:bg-red-800 active:scale-95"
+                                  title="もう一度押すと削除確定"
+                                >
+                                  確
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeletePlayerId(player.id)}
+                                  className="shrink-0 w-8 h-8 grid place-items-center bg-red-200 text-red-800 rounded-md text-xs font-bold hover:bg-red-300 active:scale-95"
+                                  title="押し間違い防止：次で確定"
+                                >
+                                  削
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
@@ -724,16 +791,16 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">交代する選手（OUT）※先頭6人</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">交代する選手（OUT）※コート内のみ</label>
               <select
                 value={benchPlayerId}
                 onChange={(e) => setBenchPlayerId(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               >
                 <option value="">選択してください</option>
-                {outCandidates.map((p, idx) => (
+                {outCandidates.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name || '(未入力)'}（#{idx + 1}）
+                    {p.name || '(未入力)'}
                   </option>
                 ))}
               </select>
