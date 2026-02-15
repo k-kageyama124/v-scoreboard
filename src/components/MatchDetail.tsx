@@ -406,7 +406,7 @@ undefined
           </div>
         </div>
 
-        {/* 入力表（マス目） */}
+              {/* 入力表（マス目） */}
         <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-gray-800">選手記録（入力表）</h2>
@@ -469,21 +469,48 @@ undefined
                                 {player.name || '(未入力)'}
                               </div>
                             </div>
-                            <button
-  onClick={() => startEditingPlayer(player)}
-  className="shrink-0 w-[3.5rem] px-2 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95"
-  title="選手名編集"
->
-  編集
-</button>
 
-<button
-  onClick={() => deletePlayerHard(player.id)}
-  className="shrink-0 px-2 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 active:scale-95"
-  title="選手を削除（このセットの記録・交代履歴も削除）"
->
-  削除
-</button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => startEditingPlayer(player)}
+                                className="shrink-0 w-[3.5rem] px-2 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95"
+                                title="選手名編集"
+                              >
+                                編集
+                              </button>
+
+                              <button
+                                onClick={() => deletePlayerHard(player.id)}
+                                className="shrink-0 px-2 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 active:scale-95"
+                                title="選手を削除（このセットの記録・交代履歴も削除）"
+                              >
+                                削除
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 入力セル */}
+                      {STAT_KEYS.map((k) => {
+                        const v = totals[k];
+                        return (
+                          <td
+                            key={k}
+                            onClick={() => tapCell(player.id, k)}
+                            className="border-2 border-gray-300 px-2 py-2 text-center select-none cursor-pointer active:bg-yellow-100"
+                          >
+                            <span className="text-lg font-bold">{v === 0 ? '' : v}</span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
           {/* 凡例 */}
           <div className="mt-4 text-sm text-gray-700 bg-gray-50 rounded-xl p-3">
             <div className="font-bold mb-1">記号の意味</div>
