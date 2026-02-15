@@ -87,6 +87,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingPlayerName, setEditingPlayerName] = useState<string>('');
 
+  // (3) 削除ボタン誤タップ防止（2段階）
+  const [confirmDeletePlayerId, setConfirmDeletePlayerId] = useState<string | null>(null);
+
   // 初期化
   useEffect(() => {
     if (initialized) return;
@@ -235,7 +238,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
       const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
 
-      // IN が未登録なら末尾に追加
       if (!players.some((p) => p.id === inPlayer!.id)) players.push(inPlayer!);
 
       const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
@@ -247,7 +249,6 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
         opponentScore: set.opponentScore,
       });
 
-      // コート内（先頭6人）を入れ替え
       const nextPlayers = [...players];
       const outIndex = nextPlayers.findIndex((p) => p.id === outPlayer.id);
       if (outIndex >= 0) nextPlayers[outIndex] = { ...inPlayer! };
@@ -260,7 +261,7 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
     setInPlayerName('');
   };
 
-  // 交代履歴：最後の1件だけ削除（このセットのみ）
+  // (2) 交代履歴：最後の1件だけ削除（このセットのみ）＋コート内も1手戻す
   const deleteLastSubstitution = () => {
     if (!currentSetData) return;
 
@@ -270,13 +271,29 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
       return;
     }
 
-    if (!confirm('最後の交代を削除しますか？（このセットのみ）')) return;
+    if (!confirm('最後の交代を削除して、コート内も1つ前に戻します。よろしいですか？（このセットのみ）')) return;
 
     const updatedSets = match.sets.map((set: any, idx: number) => {
       if (idx !== currentSetIndex) return set;
+
       const substitutions = Array.isArray(set.substitutions) ? [...set.substitutions] : [];
-      substitutions.pop();
-      return { ...set, substitutions };
+      const popped = substitutions.pop(); // 最後の交代
+
+      const players: Player[] = Array.isArray(set.players) ? [...set.players] : [];
+      if (!popped) return { ...set, players, substitutions };
+
+      const outId = popped.outPlayer;
+      const inId = popped.inPlayer;
+
+      const outP = players.find((p) => p.id === outId) || null;
+      const nextPlayers = [...players];
+
+      const idxInCourt = nextPlayers.slice(0, 6).findIndex((p) => p.id === inId);
+      if (idxInCourt >= 0 && outP) {
+        nextPlayers[idxInCourt] = { ...outP };
+      }
+
+      return { ...set, players: nextPlayers, substitutions };
     });
 
     onUpdate({ ...match, sets: updatedSets });
@@ -326,6 +343,9 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
   // 選手を完全削除（方式H）：このセットのみ（players/statActions/substitutionsから除去）
   const deletePlayerHard = (playerId: string) => {
     if (!currentSetData) return;
+
+    // (3) 削除確定状態をリセット
+    setConfirmDeletePlayerId(null);
 
     const player = (currentSetData.players || []).find((p: Player) => p.id === playerId);
     const name = (player?.name || '').trim() || '(未入力)';
@@ -595,7 +615,12 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
 
                   return (
                     <tr key={player.id} className={idx < 6 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="border-2 border-gray-300 px-2 py-2 align-top sticky left-0 bg-inherit z-10 w-[10rem] min-w-[10rem] max-w-[10rem]">
+                      {/* (1) コート内（先頭6人）は名前セルを水色 */}
+                      <td
+                        className={`border-2 border-gray-300 px-2 py-2 align-top sticky left-0 z-10 w-[10rem] min-w-[10rem] max-w-[10rem] ${
+                          idx < 6 ? 'bg-sky-100' : 'bg-inherit'
+                        }`}
+                      >
                         {editingPlayerId === player.id ? (
                           <div className="flex items-center gap-2">
                             <input
@@ -633,13 +658,25 @@ export default function MatchDetail({ match, onBack, onUpdate }: MatchDetailProp
                               >
                                 編集
                               </button>
-                              <button
-                                onClick={() => deletePlayerHard(player.id)}
-                                className="shrink-0 px-2 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 active:scale-95"
-                                title="選手を削除（このセットの記録・交代履歴も削除）"
-                              >
-                                削除
-                              </button>
+
+                              {/* (3) 誤タップ防止：削除→確定の2段階 */}
+                              {confirmDeletePlayerId === player.id ? (
+                                <button
+                                  onClick={() => deletePlayerHard(player.id)}
+                                  className="shrink-0 px-2 py-2 bg-red-700 text-white rounded-lg text-xs font-bold hover:bg-red-800 active:scale-95"
+                                  title="もう一度押すと削除確定"
+                                >
+                                  確定
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeletePlayerId(player.id)}
+                                  className="shrink-0 px-2 py-2 bg-red-200 text-red-800 rounded-lg text-xs font-bold hover:bg-red-300 active:scale-95"
+                                  title="押し間違い防止：次で確定"
+                                >
+                                  削除
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
